@@ -108,11 +108,11 @@
               
               # Restore function to be called on exit
               restore_changes() {
-                if [ ${#created_stashes[@]} -gt 0 ]; then
+                if [ "''${#created_stashes[@]}" -gt 0 ]; then
                   echo ""
                   echo "Restoring stashed lock file changes..."
                   # Pop stashes in reverse order
-                  for ((i=${#created_stashes[@]}-1; i>=0; i--)); do
+                  for ((i="''${#created_stashes[@]}"-1; i>=0; i--)); do
                     git stash pop >/dev/null 2>&1 || true
                   done
                 fi
