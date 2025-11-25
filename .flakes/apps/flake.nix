@@ -1,53 +1,32 @@
 {
-  description = "Launchable programs module";
+  description = "Launchable programs module - deterministic tool wrappers";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     flake-utils.url = "github:numtide/flake-utils";
-    # Project root is passed from parent flake via follows
-    # Parent provides the actual path, so we just declare the input
-    project-root.url = "";
+    # Packages flake for building deterministic tools
+    packages-flake.url = "path:../packages";
   };
 
-  outputs = { self, nixpkgs, flake-utils, project-root }:
+  outputs = { self, nixpkgs, flake-utils, packages-flake }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
           inherit system;
           config.allowUnfree = true;
         };
-        # Project root from input
-        projectRoot = toString project-root;
       in
       {
         apps = {
-          # Format Rust code (nix fmt handles nix files)
-          fmt-rust = {
-            type = "app";
-            program = toString (pkgs.writeShellScript "fmt-rust" ''
-              cd ${projectRoot}
-              ${pkgs.cargo}/bin/cargo fmt
-              echo "Formatted Rust code"
-            '');
-          };
-
-          # Run tests
-          test = {
-            type = "app";
-            program = toString (pkgs.writeShellScript "test" ''
-              cd ${projectRoot}
-              ${pkgs.cargo}/bin/cargo test
-            '');
-          };
-
-          # Build the project
-          build = {
-            type = "app";
-            program = toString (pkgs.writeShellScript "build" ''
-              cd ${projectRoot}
-              ${pkgs.cargo}/bin/cargo build --release
-            '');
-          };
+          # Apps are deterministic wrappers around packages
+          # These tools are built deterministically and can be used
+          # by the root flake for impure operations (outside sandbox)
+          
+          # Example: Wrapper around a package
+          # my-tool = {
+          #   type = "app";
+          #   program = "${packages-flake.packages.${system}.my-tool}/bin/my-tool";
+          # };
         };
       }
     );

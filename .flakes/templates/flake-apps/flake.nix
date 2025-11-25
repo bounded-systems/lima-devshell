@@ -1,37 +1,31 @@
 {
-  description = "Launchable programs module";
+  description = "Launchable programs module - deterministic tool wrappers";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     flake-utils.url = "github:numtide/flake-utils";
-    # Project root is passed from parent flake via follows
-    # Parent provides the actual path, so we just declare the input
-    project-root.url = "";
+    # Packages flake for building deterministic tools
+    packages-flake.url = "path:../packages";
   };
 
-  outputs = { self, nixpkgs, flake-utils, project-root }:
+  outputs = { self, nixpkgs, flake-utils, packages-flake }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
           inherit system;
           config.allowUnfree = true;
         };
-        # Project root from input
-        projectRoot = toString project-root;
       in
       {
         apps = {
-          # Add your project-specific apps here
-          # Note: Use 'nix fmt' for formatting nix files
-          # Note: Use 'nix flake check' for flake validation
-          # 
-          # Example:
-          # test = {
+          # Apps are deterministic wrappers around packages
+          # These tools are built deterministically and can be used
+          # by the root flake for impure operations (outside sandbox)
+          
+          # Example: Wrapper around a package
+          # my-tool = {
           #   type = "app";
-          #   program = toString (pkgs.writeShellScript "test" ''
-          #     cd ${projectRoot}
-          #     ${pkgs.cargo}/bin/cargo test
-          #   '');
+          #   program = "${packages-flake.packages.${system}.my-tool}/bin/my-tool";
           # };
         };
       }
