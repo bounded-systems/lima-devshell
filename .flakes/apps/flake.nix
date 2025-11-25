@@ -494,6 +494,9 @@
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               echo "  Locked:        $locked"
               echo "  Failed:        $failed"
+              if [ $commits_made -gt 0 ]; then
+                echo "  Commits made:   $commits_made"
+              fi
               
               if [ $failed -gt 0 ]; then
                 echo ""
