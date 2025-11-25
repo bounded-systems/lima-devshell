@@ -26,8 +26,8 @@
           flake-check = pkgs.runCommand "flake-check" { } ''
             echo "Checking root flake validity..."
             export NIX_CONFIG="experimental-features = nix-command flakes"
-            # Use nix flake show to validate the flake structure without full check
-            ${pkgs.nix}/bin/nix flake show ${projectRoot} --no-build > /dev/null
+            # Use nix flake show to validate the flake structure
+            ${pkgs.nix}/bin/nix flake show ${projectRoot} > /dev/null
             touch $out
           '';
 
