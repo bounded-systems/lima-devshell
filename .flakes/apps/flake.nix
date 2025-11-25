@@ -89,27 +89,32 @@
               # Ensure find and git are available
               export PATH="${findutils}/bin:$PATH"
               
-              # Check if we're in a git repo and have uncommitted changes
-              local has_uncommitted=false
-              local stash_created=false
-              if git rev-parse --git-dir >/dev/null 2>&1; then
-                if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-                  has_uncommitted=true
-                  echo "Detected uncommitted changes - temporarily stashing to allow flake updates..."
-                  git stash push -m "temp: impure-update-flakes $(date +%s)" >/dev/null 2>&1 && stash_created=true || {
-                    echo "Warning: Could not stash changes. Flake updates may fail."
-                  }
+              # Track stashes created during updates
+              declare -a created_stashes=()
+              
+              # Function to stash lock file changes after each update
+              stash_lock_changes() {
+                if git rev-parse --git-dir >/dev/null 2>&1; then
+                  # Check if there are any lock file changes
+                  if ! git diff-index --quiet HEAD -- '*.lock' 2>/dev/null || ! git ls-files --others --exclude-standard '*.lock' | grep -q .; then
+                    # Stash only lock files
+                    local stash_msg="temp: impure-update-flakes-lock-$(date +%s)"
+                    if git stash push -m "$stash_msg" -- '*.lock' >/dev/null 2>&1; then
+                      created_stashes+=("$stash_msg")
+                    fi
+                  fi
                 fi
-              fi
+              }
               
               # Restore function to be called on exit
               restore_changes() {
-                if [ "$stash_created" = true ]; then
+                if [ ${#created_stashes[@]} -gt 0 ]; then
                   echo ""
-                  echo "Restoring uncommitted changes..."
-                  git stash pop >/dev/null 2>&1 || {
-                    echo "Warning: Could not restore stashed changes. Run 'git stash list' to see them."
-                  }
+                  echo "Restoring stashed lock file changes..."
+                  # Pop stashes in reverse order
+                  for ((i=${#created_stashes[@]}-1; i>=0; i--)); do
+                    git stash pop >/dev/null 2>&1 || true
+                  done
                 fi
               }
               trap restore_changes EXIT
@@ -212,6 +217,8 @@
                 if [ "$update_success" = true ]; then
                   echo "  ✓ Updated successfully"
                   ((updated++))
+                  # Stash lock file changes after successful update to keep repo clean for next update
+                  stash_lock_changes
                 else
                   echo "  ✗ Update failed"
                   echo "  Note: This may be due to uncommitted changes or network issues"
