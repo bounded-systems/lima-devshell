@@ -41,7 +41,8 @@
             };
             program = toString (pkgs.writeShellScript "lock-deps" ''
               set -euo pipefail
-              cd ${projectRoot}
+              # Use current directory (where user runs the command), not store path
+              # User should run this from the project root
               
               # Ensure cargo is available (from nixpkgs input)
               export PATH="${cargo}/bin:$PATH"
@@ -66,7 +67,8 @@
             };
             program = toString (pkgs.writeShellScript "vendor-deps" ''
               set -euo pipefail
-              cd ${projectRoot}
+              # Use current directory (where user runs the command), not store path
+              # User should run this from the project root
               
               # Ensure cargo is available (from nixpkgs input)
               export PATH="${cargo}/bin:$PATH"
@@ -99,7 +101,8 @@
             };
             program = toString (pkgs.writeShellScript "prep" ''
               set -euo pipefail
-              cd ${projectRoot}
+              # Use current directory (where user runs the command), not store path
+              # User should run this from the project root
               
               # Ensure cargo is available (from nixpkgs input)
               export PATH="${cargo}/bin:$PATH"
