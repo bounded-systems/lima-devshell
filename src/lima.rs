@@ -133,10 +133,24 @@ fn create_lima_instance(instance_name: &str, config_path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Delete a Lima instance
+fn delete_lima_instance(instance_name: &str) -> Result<()> {
+    let status = Command::new("limactl")
+        .args(["delete", "--force", instance_name])
+        .status()
+        .context("failed to execute limactl delete")?;
+
+    if !status.success() {
+        anyhow::bail!("failed to delete Lima instance");
+    }
+
+    Ok(())
+}
+
 /// Start a Lima instance by name
 fn start_lima_instance(instance_name: &str) -> Result<()> {
     let status = Command::new("limactl")
-        .args(["start", instance_name])
+        .args(["start", "--tty=false", instance_name])
         .status()
         .context("failed to execute limactl start")?;
 
@@ -173,11 +187,22 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &Path) -> Result<
         let is_running = is_instance_running(&instance.name)?;
 
         if !is_running {
+            // Try to start the existing instance
             println!(
                 "lima-devshell: starting existing Lima instance '{}'...",
                 instance.name
             );
-            start_lima_instance(&instance.name)?;
+            
+            // If start fails, the instance might have invalid config - delete and recreate
+            if start_lima_instance(&instance.name).is_err() {
+                println!(
+                    "lima-devshell: instance failed to start, deleting and recreating '{}'...",
+                    instance.name
+                );
+                delete_lima_instance(&instance.name)?;
+                create_lima_instance(&instance.name, &local_yaml_path)?;
+                start_lima_instance(&instance.name)?;
+            }
         }
     }
 
