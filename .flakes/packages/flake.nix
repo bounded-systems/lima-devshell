@@ -21,8 +21,8 @@
         # Project root from input
         projectRoot = toString project-root;
 
-        # Initialize crane - crane.lib.${system} is the craneLib
-        craneLib = crane.lib.${system};
+        # Initialize crane
+        craneLib = crane.lib.${system} pkgs;
 
         # Filter source files (excludes vendor, target, etc.)
         src = craneLib.cleanCargoSource (craneLib.path projectRoot);
