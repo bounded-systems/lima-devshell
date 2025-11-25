@@ -86,48 +86,40 @@
               PROJECT_ROOT=$(pwd)
               
               # Use system nix (Determinate Systems) from PATH
-              # Ensure find is available
+              # Ensure find and git are available
               export PATH="${findutils}/bin:$PATH"
               
-              # Create temporary directory to store lock files
-              lock_files_tmp=$(mktemp -d)
-              trap "rm -rf $lock_files_tmp" EXIT
+              # Track commits made during updates
+              commits_made=0
               
-              # Function to save lock file to temp directory after each update
-              save_lock_file() {
+              # Function to commit lock file after each update
+              commit_lock_file() {
                 local flake_dir="$1"
+                local flake_name="$2"
                 local lock_file="$flake_dir/flake.lock"
-                if [ -f "$lock_file" ]; then
-                  # Create a unique path in temp dir based on flake directory
-                  local rel_path=$(realpath --relative-to="$PROJECT_ROOT" "$flake_dir" 2>/dev/null || echo "$flake_dir" | sed "s|^$PROJECT_ROOT/||")
-                  local tmp_lock_path="$lock_files_tmp/$rel_path/flake.lock"
-                  mkdir -p "$(dirname "$tmp_lock_path")"
-                  # Copy lock file to temp directory (don't delete from work tree)
-                  cp "$lock_file" "$tmp_lock_path"
+                
+                if [ ! -f "$lock_file" ]; then
+                  return
+                fi
+                
+                # Check if we're in a git repo
+                if ! git rev-parse --git-dir >/dev/null 2>&1; then
+                  return
+                fi
+                
+                # Check if lock file has changes
+                if git diff --quiet "$lock_file" 2>/dev/null && git diff --cached --quiet "$lock_file" 2>/dev/null; then
+                  # No changes to commit
+                  return
+                fi
+                
+                # Add and commit the lock file
+                if git add "$lock_file" >/dev/null 2>&1; then
+                  if git commit -m "chore: update flake.lock for $flake_name" >/dev/null 2>&1; then
+                    ((commits_made++))
+                  fi
                 fi
               }
-              
-              # Restore function to be called on exit
-              restore_lock_files() {
-                if [ -d "$lock_files_tmp" ] && [ -n "$(find "$lock_files_tmp" -name "flake.lock" 2>/dev/null)" ]; then
-                  echo ""
-                  echo "Restoring lock files to work tree..."
-                  local restored=0
-                  find "$lock_files_tmp" -name "flake.lock" -type f | while read -r tmp_lock; do
-                    # Reconstruct the original path
-                    local rel_path=$(echo "$tmp_lock" | sed "s|^$lock_files_tmp/||" | sed "s|/flake.lock$||")
-                    local original_lock="$PROJECT_ROOT/$rel_path/flake.lock"
-                    if [ -f "$tmp_lock" ]; then
-                      mkdir -p "$(dirname "$original_lock")"
-                      cp "$tmp_lock" "$original_lock"
-                      ((restored++))
-                      echo "  ✓ Restored $rel_path/flake.lock"
-                    fi
-                  done
-                  echo ""
-                fi
-              }
-              trap restore_lock_files EXIT
               
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               echo "  Flake Update Tool"
@@ -275,8 +267,8 @@
                   if [ -f "$lock_file" ]; then
                     echo "  ✓ Updated successfully"
                     ((updated++))
-                    # Save lock file to temp directory after successful update to keep repo clean for next update
-                    save_lock_file "$flake_dir"
+                    # Commit lock file after successful update to keep repo clean for next update
+                    commit_lock_file "$flake_dir" "$flake_name"
                   else
                     echo "  ✗ Update failed: Lock file not found after update"
                     ((failed++))
@@ -306,6 +298,9 @@
               echo "  Updated:        $updated"
               echo "  Already up to date: $already_up_to_date"
               echo "  Failed:          $failed"
+              if [ $commits_made -gt 0 ]; then
+                echo "  Commits made:   $commits_made"
+              fi
               
               if [ $failed -gt 0 ]; then
                 echo ""
