@@ -121,11 +121,11 @@
               
               # Find and update all flakes in .flakes/ subdirectories
               if [ -d "${projectRoot}/.flakes" ]; then
-                while IFS= read -r -d '' flake_file; do
+                find "${projectRoot}/.flakes" -mindepth 2 -maxdepth 2 -name "flake.nix" -type f 2>/dev/null | while read -r flake_file; do
                   flake_dir=$(dirname "$flake_file")
                   flake_name=".flakes/$(basename "$flake_dir")"
                   update_flake "$flake_dir" "$flake_name"
-                done < <(find "${projectRoot}/.flakes" -mindepth 2 -maxdepth 2 -name "flake.nix" -type f -print0 2>/dev/null || true)
+                done || true
               else
                 echo "Warning: .flakes directory not found"
                 echo ""
