@@ -149,13 +149,42 @@
                 echo "Updating: $flake_name"
                 echo "  Directory: $flake_dir"
                 
-                if (cd "$flake_dir" && nix flake update); then
+                # Check if directory is writable (not a Nix store path)
+                if [[ "$flake_dir" == /nix/store/* ]]; then
+                  echo "  ⚠ Skipping: Directory is in Nix store (read-only)"
+                  echo "  Hint: Run this command from your project directory, not via nix run"
+                  ((failed++))
+                  failed_dirs+=("$flake_name (read-only)")
+                  echo ""
+                  return
+                fi
+                
+                # Ensure directory is writable
+                if [ ! -w "$flake_dir" ]; then
+                  echo "  ✗ Directory is not writable"
+                  ((failed++))
+                  failed_dirs+=("$flake_name")
+                  echo ""
+                  return
+                fi
+                
+                # Update the flake
+                # Use --no-warn-dirty to allow updates even with uncommitted changes
+                # This is safe for lock file updates
+                if (cd "$flake_dir" && nix flake update --no-warn-dirty >/dev/null 2>&1); then
                   echo "  ✓ Updated successfully"
                   ((updated++))
                 else
-                  echo "  ✗ Update failed"
-                  ((failed++))
-                  failed_dirs+=("$flake_name")
+                  # Try without --no-warn-dirty if that flag doesn't exist
+                  if (cd "$flake_dir" && nix flake update >/dev/null 2>&1); then
+                    echo "  ✓ Updated successfully"
+                    ((updated++))
+                  else
+                    echo "  ✗ Update failed"
+                    echo "  Note: This may be due to uncommitted changes or network issues"
+                    ((failed++))
+                    failed_dirs+=("$flake_name")
+                  fi
                 fi
                 echo ""
               }
