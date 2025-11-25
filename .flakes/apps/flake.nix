@@ -211,13 +211,54 @@
                 fi
                 
                 # Update the flake
-                # If we stashed changes, the repo should be clean now and updates should work
-                if (cd "$flake_dir" && nix flake update --no-warn-dirty >/dev/null 2>&1); then
-                  update_success=true
+                # Check lock file before update to detect if it actually changes
+                local lock_file="$flake_dir/flake.lock"
+                local lock_before=""
+                if [ -f "$lock_file" ]; then
+                  lock_before=$(md5sum "$lock_file" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$lock_file" 2>/dev/null | cut -d' ' -f1 || echo "")
+                fi
+                
+                # Try to update the flake (capture output to check for actual updates)
+                local update_output
+                update_output=$(cd "$flake_dir" && nix flake update --no-warn-dirty 2>&1)
+                local update_exit=$?
+                
+                if [ $update_exit -eq 0 ]; then
+                  # Check if lock file actually changed
+                  local lock_after=""
+                  local actually_changed=false
+                  if [ -f "$lock_file" ]; then
+                    lock_after=$(md5sum "$lock_file" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$lock_file" 2>/dev/null | cut -d' ' -f1 || echo "")
+                    if [ -n "$lock_before" ] && [ -n "$lock_after" ] && [ "$lock_before" != "$lock_after" ]; then
+                      actually_changed=true
+                    elif [ -z "$lock_before" ] && [ -n "$lock_after" ]; then
+                      actually_changed=true
+                    fi
+                  fi
+                  
+                  # Check if nix reported any updates in the output
+                  if echo "$update_output" | grep -qE "(Updated|Added) input"; then
+                    actually_changed=true
+                  fi
+                  
+                  if [ "$actually_changed" = true ]; then
+                    update_success=true
+                  else
+                    echo "  ⚠ No changes: Lock file unchanged (inputs already up to date)"
+                    update_success=true  # Still count as success, just no changes needed
+                  fi
                 else
                   # If that failed, try without --no-warn-dirty
-                  if (cd "$flake_dir" && nix flake update >/dev/null 2>&1); then
+                  update_output=$(cd "$flake_dir" && nix flake update 2>&1)
+                  if [ $? -eq 0 ]; then
                     update_success=true
+                  else
+                    # Show error message
+                    if echo "$update_output" | grep -q "uncommitted changes"; then
+                      echo "  ⚠ Skipped: Uncommitted changes detected"
+                    else
+                      echo "  Error: $(echo "$update_output" | head -1)"
+                    fi
                   fi
                 fi
                 
