@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     crane.url = "github:ipetkov/crane";
-    
+
     # Project root path (git repo root) - non-flake path input
     # Default to parent directory for standalone use, overridden by parent via follows
     project-root.url = "path:..";
@@ -19,7 +19,7 @@
 
     # Checks flake
     checks-flake.url = "path:./checks";
-    
+
     # Share nixpkgs, project-root, and crane with checks flake
     checks-flake.inputs.nixpkgs.follows = "nixpkgs";
     checks-flake.inputs.project-root.follows = "project-root";
@@ -27,21 +27,21 @@
 
     # Formatter flake
     formatter-flake.url = "path:./formatter";
-    
+
     # Share nixpkgs with formatter flake
     formatter-flake.inputs.nixpkgs.follows = "nixpkgs";
-    
+
     # Packages flake
     packages-flake.url = "path:./packages";
-    
+
     # Share nixpkgs, project-root, and crane with packages flake
     packages-flake.inputs.nixpkgs.follows = "nixpkgs";
     packages-flake.inputs.project-root.follows = "project-root";
     packages-flake.inputs.crane.follows = "crane";
-    
+
     # Lib flake
     lib-flake.url = "path:./lib";
-    
+
     # Share nixpkgs with lib flake
     lib-flake.inputs.nixpkgs.follows = "nixpkgs";
   };
