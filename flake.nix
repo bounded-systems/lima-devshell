@@ -2,7 +2,7 @@
   description = "Bootstrap devshell for Lima VM and Home Manager configuration for macOS";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
 
     # Project root path (git repo root) - non-flake path input

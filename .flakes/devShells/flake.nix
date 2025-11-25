@@ -2,7 +2,7 @@
   description = "Development shells module";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
     # Project root is passed from parent flake via follows
     # Parent provides the actual path, so we just declare the input
