@@ -44,6 +44,13 @@
           # Crane automatically fetches dependencies from crates.io using Cargo.lock
           lima-devshell = craneLib.buildPackage commonArgs;
 
+          # Build clippy for offline usage
+          # This runs clippy on the codebase and produces a derivation
+          # that can be built and cached for offline use
+          clippy = craneLib.cargoClippy (commonArgs // {
+            cargoClippyExtraArgs = "--all-targets -- -D warnings";
+          });
+
           # Default package
           default = self.packages.${system}.lima-devshell;
         };
