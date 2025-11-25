@@ -94,13 +94,20 @@
               
               # Function to stash lock file changes after each update
               stash_lock_changes() {
+                local flake_dir="$1"
                 if git rev-parse --git-dir >/dev/null 2>&1; then
-                  # Check if there are any lock file changes
-                  if ! git diff-index --quiet HEAD -- '*.lock' 2>/dev/null || ! git ls-files --others --exclude-standard '*.lock' | grep -q .; then
-                    # Stash only lock files
-                    stash_msg="temp: impure-update-flakes-lock-$(date +%s)"
-                    if git stash push -m "$stash_msg" -- '*.lock' >/dev/null 2>&1; then
-                      created_stashes+=("$stash_msg")
+                  # Stash the specific lock file for this flake directory
+                  local lock_file="$flake_dir/flake.lock"
+                  if [ -f "$lock_file" ]; then
+                    # Check if the lock file has changes
+                    if ! git diff-index --quiet HEAD -- "$lock_file" 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard "$lock_file" 2>/dev/null)" ]; then
+                      # Add the lock file to staging if it's not already tracked
+                      git add -f "$lock_file" 2>/dev/null || true
+                      # Stash only this specific lock file
+                      stash_msg="temp: impure-update-flakes-lock-$(date +%s)-$(basename "$flake_dir")"
+                      if git stash push -m "$stash_msg" -- "$lock_file" >/dev/null 2>&1; then
+                        created_stashes+=("$stash_msg")
+                      fi
                     fi
                   fi
                 fi
@@ -218,7 +225,7 @@
                   echo "  ✓ Updated successfully"
                   ((updated++))
                   # Stash lock file changes after successful update to keep repo clean for next update
-                  stash_lock_changes
+                  stash_lock_changes "$flake_dir"
                 else
                   echo "  ✗ Update failed"
                   echo "  Note: This may be due to uncommitted changes or network issues"
