@@ -4,21 +4,19 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     flake-utils.url = "github:numtide/flake-utils";
-    # Packages flake for building deterministic tools
-    packages-flake.url = "path:../packages";
     # Project root is passed from parent flake via follows
     # Parent provides the actual path, so we just declare the input
     project-root.url = "";
   };
 
-  outputs = { self, nixpkgs, flake-utils, packages-flake, project-root }:
+  outputs = { self, nixpkgs, flake-utils, project-root }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
           inherit system;
           config.allowUnfree = true;
         };
-        # Project root from input
+        # Project root from input (passed from root flake)
         projectRoot = toString project-root;
         
         # All tools come from nixpkgs input (deterministic)
