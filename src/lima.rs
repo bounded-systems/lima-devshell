@@ -156,7 +156,7 @@ fn delete_lima_instance(instance_name: &str) -> Result<()> {
 /// Start a Lima instance by name
 fn start_lima_instance(instance_name: &str) -> Result<()> {
     let status = Command::new("limactl")
-        .args(["start", "--tty=false", instance_name])
+        .args(["start", "--yes", instance_name])
         .status()
         .context("failed to execute limactl start")?;
 
