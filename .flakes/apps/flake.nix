@@ -123,6 +123,7 @@
                 if git add "$lock_file" >/dev/null 2>&1; then
                   if git commit -m "chore: update flake.lock for $flake_name" >/dev/null 2>&1; then
                     ((commits_made++))
+                    echo "  ✓ Committed lock file"
                   fi
                 fi
               }
@@ -274,7 +275,7 @@
                   if [ -f "$lock_file" ]; then
                     echo "  ✓ Updated successfully"
                     ((updated++))
-                    # Commit lock file after successful update to keep repo clean for next update
+                    # Commit lock file immediately after successful update to keep repo clean
                     commit_lock_file "$flake_dir" "$flake_name"
                   else
                     echo "  ✗ Update failed: Lock file not found after update"
@@ -399,6 +400,37 @@
               already_locked=0
               failed=0
               failed_dirs=()
+              commits_made=0
+              
+              # Function to commit lock file after each lock
+              commit_lock_file() {
+                local flake_dir="$1"
+                local flake_name="$2"
+                local lock_file="$flake_dir/flake.lock"
+                
+                if [ ! -f "$lock_file" ]; then
+                  return
+                fi
+                
+                # Check if we're in a git repo
+                if ! git rev-parse --git-dir >/dev/null 2>&1; then
+                  return
+                fi
+                
+                # Check if lock file has changes
+                if git diff --quiet "$lock_file" 2>/dev/null && git diff --cached --quiet "$lock_file" 2>/dev/null; then
+                  # No changes to commit
+                  return
+                fi
+                
+                # Add and commit the lock file
+                if git add "$lock_file" >/dev/null 2>&1; then
+                  if git commit -m "chore: lock flake.lock for $flake_name" >/dev/null 2>&1; then
+                    ((commits_made++))
+                    echo "  ✓ Committed lock file"
+                  fi
+                fi
+              }
               
               # Function to lock a flake in a directory
               lock_flake() {
@@ -434,6 +466,8 @@
                   if [ -f "$lock_file" ]; then
                     echo "  ✓ Locked successfully"
                     ((locked++))
+                    # Commit lock file immediately after successful lock to keep repo clean
+                    commit_lock_file "$flake_dir" "$flake_name"
                   else
                     echo "  ✗ Lock failed: Lock file not found after lock"
                     ((failed++))
