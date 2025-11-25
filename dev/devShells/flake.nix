@@ -4,25 +4,56 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     flake-utils.url = "github:numtide/flake-utils";
-    config-tooling.url = "path:../config/tooling";
-    config-env.url = "path:../config/env";
-    
-    # Share nixpkgs across config flakes
-    config-tooling.inputs.nixpkgs.follows = "nixpkgs";
+    # Project root is passed from parent flake via follows
+    project-root.url = "path:../..";
   };
 
-  outputs = { self, nixpkgs, flake-utils, config-tooling, config-env }:
+  outputs = { self, nixpkgs, flake-utils, project-root }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
           inherit system;
           config.allowUnfree = true;
         };
-        tooling = config-tooling.packages.${system}.default;
-        env = config-env.packages.${system}.default;
+        
+        # Tooling packages (merged from config/tooling)
+        tooling = with pkgs; [
+          # Rust toolchain
+          rustc
+          cargo
+          rustfmt
+          clippy
+          rust-analyzer
+          
+          # Build dependencies (matching root flake)
+          libgit2
+          pkg-config
+          
+          # Development tools
+          git
+          just  # Task runner (optional, but useful)
+          
+          # Linting and formatting
+          nixpkgs-fmt  # For formatting flake.nix files
+          
+          # Testing and debugging
+          gdb  # Debugger
+        ];
+        
+        # Environment variables (merged from config/env)
+        env = {
+          # Rust development environment
+          RUST_BACKTRACE = "1";
+          RUST_LOG = "debug";
+          
+          # Cargo configuration for proper locking
+          # Cargo will manage Cargo.lock in the project root
+          # No need to set CARGO_HOME - let cargo use default or system location
+        };
         
         # Shell hook (read and display help text, with variable substitution)
-        helpText = builtins.readFile ../devshell-help.txt;
+        # Read from dev directory relative to project root
+        helpText = builtins.readFile (project-root + "/dev/devshell-help.txt");
         shellHook = ''
           # Display help text with variable substitution
           cat <<EOF
@@ -31,7 +62,7 @@
         '';
       in
       {
-        packages.default = pkgs.mkShell {
+        devShells.default = pkgs.mkShell {
           # Tooling packages
           buildInputs = tooling;
 
@@ -44,4 +75,3 @@
       }
     );
 }
-

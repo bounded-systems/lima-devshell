@@ -4,20 +4,22 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     flake-utils.url = "github:numtide/flake-utils";
+    # Project root is passed from parent flake via follows
+    project-root.url = "path:../..";
   };
 
-  outputs = { self, nixpkgs, flake-utils }:
+  outputs = { self, nixpkgs, flake-utils, project-root }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {
           inherit system;
           config.allowUnfree = true;
         };
-        # Project root (parent of dev directory)
-        projectRoot = toString (self + "/../..");
+        # Project root from input
+        projectRoot = toString project-root;
       in
       {
-        packages = {
+        checks = {
           # Check that the root flake is valid
           flake-check = pkgs.runCommand "flake-check" {} ''
             echo "Checking root flake validity..."
@@ -48,4 +50,3 @@
       }
     );
 }
-
