@@ -5,8 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     flake-utils.url = "github:numtide/flake-utils";
     
-    # Project root is passed from parent flake
-    # Parent provides project root via path:.
+    # Project root (git repo root) - required, passed from parent flake
     project-root.url = "";
     
     # Apps flake
@@ -17,7 +16,7 @@
     apps-flake.inputs.project-root.follows = "project-root";
   };
 
-  outputs = { self, nixpkgs, flake-utils, project-root, apps-flake }:
+  outputs = { self, nixpkgs, flake-utils, apps-flake }:
     flake-utils.lib.eachDefaultSystem (system:
       {
         # Apps output maps directly to apps subflake

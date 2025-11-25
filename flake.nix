@@ -10,11 +10,12 @@
     
     # Share nixpkgs with flakes
     flakes.inputs.nixpkgs.follows = "nixpkgs";
-    # Pass project root (current directory) to flakes (always follow project root)
+    # Pass project root (git repo root) to flakes
     flakes.inputs.project-root.url = "path:.";
   };
 
   outputs = { self, nixpkgs, flake-utils, flakes }:
     # Delegate all outputs to .flakes flake
+    # Project root is passed via PROJECT_ROOT environment variable (git repo root)
     flakes;
 }

@@ -4,8 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     flake-utils.url = "github:numtide/flake-utils";
-    # Project root is passed from parent flake via follows
-    # Parent provides the actual path, so we just declare the input
+    # Project root (git repo root) - required, passed from parent flake
     project-root.url = "";
   };
 
@@ -16,7 +15,8 @@
           inherit system;
           config.allowUnfree = true;
         };
-        # Project root from input (passed from root flake)
+        # Project root is the git repo root, passed as required input
+        # No fallback - must be provided by parent flake
         projectRoot = toString project-root;
         
         # All tools come from nixpkgs input (deterministic)
