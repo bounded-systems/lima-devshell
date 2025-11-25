@@ -87,24 +87,10 @@ provision:
 }
 
 /// Write Lima YAML configuration to a specific path
-fn write_lima_yaml_to_path(instance: &InstanceModel, yaml_path: &PathBuf) -> Result<()> {
+fn write_lima_yaml(instance: &InstanceModel, yaml_path: &PathBuf) -> Result<()> {
     let yaml_content = generate_lima_yaml(instance);
     std::fs::write(yaml_path, yaml_content)
         .context("failed to write Lima YAML configuration")?;
-    Ok(())
-}
-
-/// Write Lima YAML configuration to instance directory
-fn write_lima_yaml(instance: &InstanceModel) -> Result<()> {
-    let home = env::var("HOME").context("HOME environment variable not set")?;
-    let lima_instance_dir = PathBuf::from(format!("{}/.lima/{}", home, instance.name));
-
-    std::fs::create_dir_all(&lima_instance_dir)
-        .context("failed to create Lima instance directory")?;
-
-    let yaml_path = lima_instance_dir.join("lima.yaml");
-    write_lima_yaml_to_path(instance, &yaml_path)?;
-
     Ok(())
 }
 
@@ -145,32 +131,18 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &PathBuf) -> Resu
     let home = env::var("HOME").context("HOME environment variable not set")?;
     let lima_instance_dir = PathBuf::from(format!("{}/.lima/{}", home, instance.name));
 
-    // Always update the YAML configuration in the default location
-    write_lima_yaml(instance)?;
-
-    // Also write to current directory if we're in a worktree with a flake
+    // Write YAML configuration to the worktree directory (not to home)
     let local_yaml_path = worktree_dir.join("lima.yaml");
-    if worktree_dir.join("flake.nix").exists() {
-        write_lima_yaml_to_path(instance, &local_yaml_path)?;
-        println!("lima-devshell: wrote lima.yaml to {}", local_yaml_path.display());
-    }
+    write_lima_yaml(instance, &local_yaml_path)?;
+    println!("lima-devshell: wrote lima.yaml to {}", local_yaml_path.display());
 
-    // Prefer using local YAML if it exists, otherwise use default location
-    let yaml_path_to_use = if local_yaml_path.exists() {
-        Some(local_yaml_path)
-    } else {
-        Some(lima_instance_dir.join("lima.yaml"))
-    };
-
+    // Check if instance already exists
     if !lima_instance_dir.exists() {
         println!(
             "lima-devshell: creating Lima instance '{}'...",
             instance.name
         );
-
-        if let Some(ref yaml_path) = yaml_path_to_use {
-            start_lima_instance(&instance.name, Some(yaml_path))?;
-        }
+        start_lima_instance(&instance.name, Some(&local_yaml_path))?;
     } else {
         // Check if instance is running
         let is_running = is_instance_running(&instance.name)?;
@@ -180,16 +152,7 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &PathBuf) -> Resu
                 "lima-devshell: starting existing Lima instance '{}'...",
                 instance.name
             );
-            // Use local YAML if available, otherwise use instance name
-            if let Some(ref yaml_path) = yaml_path_to_use {
-                if yaml_path.exists() {
-                    start_lima_instance(&instance.name, Some(yaml_path))?;
-                } else {
-                    start_lima_instance(&instance.name, None)?;
-                }
-            } else {
-                start_lima_instance(&instance.name, None)?;
-            }
+            start_lima_instance(&instance.name, Some(&local_yaml_path))?;
         }
     }
 
