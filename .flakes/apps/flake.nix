@@ -180,6 +180,7 @@
               
               # Track success/failure
               updated=0
+              already_up_to_date=0
               failed=0
               failed_dirs=()
               
@@ -243,9 +244,13 @@
                   
                   if [ "$actually_changed" = true ]; then
                     update_success=true
+                    # Don't stash if nothing changed - keep the lock file in the work tree
                   else
                     echo "  ⚠ No changes: Lock file unchanged (inputs already up to date)"
                     update_success=true  # Still count as success, just no changes needed
+                    ((already_up_to_date++))
+                    # Don't stash if nothing changed
+                    return
                   fi
                 else
                   # If that failed, try without --no-warn-dirty
@@ -263,10 +268,17 @@
                 fi
                 
                 if [ "$update_success" = true ]; then
-                  echo "  ✓ Updated successfully"
-                  ((updated++))
-                  # Stash lock file changes after successful update to keep repo clean for next update
-                  stash_lock_changes "$flake_dir"
+                  # Verify the lock file was actually written
+                  if [ -f "$lock_file" ]; then
+                    echo "  ✓ Updated successfully"
+                    ((updated++))
+                    # Stash lock file changes after successful update to keep repo clean for next update
+                    stash_lock_changes "$flake_dir"
+                  else
+                    echo "  ✗ Update failed: Lock file not found after update"
+                    ((failed++))
+                    failed_dirs+=("$flake_name")
+                  fi
                 else
                   echo "  ✗ Update failed"
                   echo "  Note: This may be due to uncommitted changes or network issues"
@@ -288,8 +300,9 @@
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               echo "  Summary"
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-              echo "  Updated: $updated"
-              echo "  Failed:  $failed"
+              echo "  Updated:        $updated"
+              echo "  Already up to date: $already_up_to_date"
+              echo "  Failed:          $failed"
               
               if [ $failed -gt 0 ]; then
                 echo ""
