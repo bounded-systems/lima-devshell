@@ -141,12 +141,26 @@ fn start_lima_instance(instance_name: &str, config_path: Option<&PathBuf>) -> Re
 }
 
 /// Ensure Lima instance exists and is running
-pub fn ensure_instance(instance: &InstanceModel) -> Result<()> {
+pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &PathBuf) -> Result<()> {
     let home = env::var("HOME").context("HOME environment variable not set")?;
     let lima_instance_dir = PathBuf::from(format!("{}/.lima/{}", home, instance.name));
 
-    // Always update the YAML configuration to ensure it's current
+    // Always update the YAML configuration in the default location
     write_lima_yaml(instance)?;
+
+    // Also write to current directory if we're in a worktree with a flake
+    let local_yaml_path = worktree_dir.join("lima.yaml");
+    if worktree_dir.join("flake.nix").exists() {
+        write_lima_yaml_to_path(instance, &local_yaml_path)?;
+        println!("lima-devshell: wrote lima.yaml to {}", local_yaml_path.display());
+    }
+
+    // Prefer using local YAML if it exists, otherwise use default location
+    let yaml_path_to_use = if local_yaml_path.exists() {
+        Some(local_yaml_path)
+    } else {
+        Some(lima_instance_dir.join("lima.yaml"))
+    };
 
     if !lima_instance_dir.exists() {
         println!(
@@ -154,8 +168,9 @@ pub fn ensure_instance(instance: &InstanceModel) -> Result<()> {
             instance.name
         );
 
-        let yaml_path = lima_instance_dir.join("lima.yaml");
-        start_lima_instance(&instance.name, Some(&yaml_path))?;
+        if let Some(ref yaml_path) = yaml_path_to_use {
+            start_lima_instance(&instance.name, Some(yaml_path))?;
+        }
     } else {
         // Check if instance is running
         let is_running = is_instance_running(&instance.name)?;
@@ -165,7 +180,16 @@ pub fn ensure_instance(instance: &InstanceModel) -> Result<()> {
                 "lima-devshell: starting existing Lima instance '{}'...",
                 instance.name
             );
-            start_lima_instance(&instance.name, None)?;
+            // Use local YAML if available, otherwise use instance name
+            if let Some(ref yaml_path) = yaml_path_to_use {
+                if yaml_path.exists() {
+                    start_lima_instance(&instance.name, Some(yaml_path))?;
+                } else {
+                    start_lima_instance(&instance.name, None)?;
+                }
+            } else {
+                start_lima_instance(&instance.name, None)?;
+            }
         }
     }
 

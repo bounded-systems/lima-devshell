@@ -117,7 +117,7 @@ pub fn run() -> Result<()> {
     println!("lima-devshell: instance: {}", ctx.lima_instance);
     println!("lima-devshell: bare repo: {}", ctx.bare_repo_path.display());
 
-    crate::lima::ensure_instance(&instance)?;
+    crate::lima::ensure_instance(&instance, &ctx.target_dir_host)?;
     crate::lima::enter_devshell(&instance, &ctx)?;
 
     Ok(())
