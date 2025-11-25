@@ -37,7 +37,15 @@
             find . -name "*.nix" -type f -print0 | xargs -0 -r nixpkgs-fmt
 
             echo "Formatting Rust files..."
-            cargo fmt --all
+            if [ -f "Cargo.toml" ]; then
+              cargo fmt --all || {
+                echo "Warning: cargo fmt failed or made no changes" >&2
+                exit 0
+              }
+              echo "Rust formatting complete"
+            else
+              echo "No Cargo.toml found, skipping Rust formatting"
+            fi
           '';
         };
       }
