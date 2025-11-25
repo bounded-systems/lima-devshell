@@ -34,10 +34,23 @@
         "type": "github"
       }
     },
+    "project-root": {
+      "flake": false,
+      "locked": {
+        "path": "..",
+        "type": "path"
+      },
+      "original": {
+        "path": "..",
+        "type": "path"
+      },
+      "parent": []
+    },
     "root": {
       "inputs": {
         "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "project-root": "project-root"
       }
     },
     "systems": {
