@@ -24,6 +24,7 @@
     checks-flake.inputs.project-root.follows = "project-root";
     apps-flake.inputs.nixpkgs.follows = "nixpkgs";
     apps-flake.inputs.packages-flake.follows = "packages-flake";
+    apps-flake.inputs.project-root.follows = "project-root";
     packages-flake.inputs.nixpkgs.follows = "nixpkgs";
     packages-flake.inputs.project-root.follows = "project-root";
   };

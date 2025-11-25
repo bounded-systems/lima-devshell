@@ -5,9 +5,9 @@ result-*
 # Flake lock (optional - some prefer to commit it)
 # flake.lock
 
-# Cargo artifacts (cargo manages Cargo.lock, we build artifacts)
+# Cargo artifacts
 target/
-Cargo.lock
+# Cargo.lock is committed for reproducible Nix builds
 
 # Editor files
 .vscode/
