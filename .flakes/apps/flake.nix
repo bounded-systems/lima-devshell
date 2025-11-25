@@ -176,19 +176,21 @@
                 # Update the flake
                 # Use --no-warn-dirty to allow updates even with uncommitted changes
                 # This is safe for lock file updates
-                if (cd "$flake_dir" && nix flake update --no-warn-dirty >/dev/null 2>&1); then
+                if (cd "$flake_dir" && nix flake update --no-warn-dirty 2>&1); then
                   echo "  ✓ Updated successfully"
                   ((updated++))
                 else
-                  # Try without --no-warn-dirty if that flag doesn't exist
-                  if (cd "$flake_dir" && nix flake update >/dev/null 2>&1); then
-                    echo "  ✓ Updated successfully"
-                    ((updated++))
-                  else
+                  local update_output
+                  update_output=$(cd "$flake_dir" && nix flake update 2>&1) || {
                     echo "  ✗ Update failed"
+                    echo "  Error output: $update_output" | head -3
                     echo "  Note: This may be due to uncommitted changes or network issues"
                     ((failed++))
                     failed_dirs+=("$flake_name")
+                  }
+                  if [ $? -eq 0 ]; then
+                    echo "  ✓ Updated successfully"
+                    ((updated++))
                   fi
                 fi
                 echo ""
