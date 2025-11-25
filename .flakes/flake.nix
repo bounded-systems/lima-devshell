@@ -27,8 +27,9 @@
     # Formatter flake
     formatter-flake.url = "path:./formatter";
     
-    # Share nixpkgs with formatter flake
+    # Share nixpkgs and project-root with formatter flake
     formatter-flake.inputs.nixpkgs.follows = "nixpkgs";
+    formatter-flake.inputs.project-root.follows = "project-root";
   };
 
   outputs = { self, nixpkgs, flake-utils, project-root, apps-flake, checks-flake, formatter-flake, ... }:
