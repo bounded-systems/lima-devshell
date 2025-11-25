@@ -22,13 +22,13 @@
       in
       {
         apps = {
-          # Pre-Nix preparation: impure operations to prepare inputs for deterministic builds
-          # This command locks dependencies (required) and optionally vendors them
-          # Vendoring is optional - Nix only needs Cargo.lock for reproducible builds
+          # Pre-Nix preparation: impure operation to prepare inputs for deterministic builds
+          # Nix's buildRustPackage uses Cargo.lock + cargoHash to download and verify dependencies
+          # No vendoring needed - Nix handles dependency fetching and caching
           impure-flake-prep = {
             type = "app";
             meta = {
-              description = "Prepare Rust project for Nix: lock dependencies (required) and optionally vendor";
+              description = "Prepare Rust project for Nix: generate Cargo.lock";
             };
             program = toString (pkgs.writeShellScript "impure-flake-prep" ''
               set -euo pipefail
@@ -43,28 +43,14 @@
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               echo ""
               
-              # (1) Lock dependencies - REQUIRED for Nix
-              # Nix needs a stable Cargo.lock to build reproducibly
-              echo "[1/2] Locking dependencies..."
+              # Lock dependencies - REQUIRED for Nix
+              # Nix's buildRustPackage uses Cargo.lock + cargoHash to:
+              # - Download dependencies from crates.io
+              # - Verify hashes
+              # - Cache in /nix/store
+              echo "Locking dependencies..."
               ${cargo}/bin/cargo generate-lockfile
               echo "  ✓ Cargo.lock generated"
-              echo ""
-              
-              # (2) Vendor dependencies - OPTIONAL
-              # Vendoring is useful for air-gapped builds or non-Nix reproducibility
-              # For Nix itself, Cargo.lock is sufficient
-              echo "[2/2] Vendoring dependencies (optional)..."
-              if [ ! -f Cargo.lock ]; then
-                echo "  ✗ Cargo.lock not found (should not happen)"
-                exit 1
-              fi
-              if ${cargo}/bin/cargo vendor vendor/ 2>/dev/null; then
-                echo "  ✓ Dependencies vendored"
-                echo "  Note: Vendoring is optional. Nix only requires Cargo.lock."
-              else
-                echo "  ⊘ Vendoring skipped (cargo vendor not available or failed)"
-                echo "  Note: This is fine - Nix only needs Cargo.lock for reproducible builds"
-              fi
               echo ""
               
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -73,9 +59,10 @@
               echo ""
               echo "Next steps:"
               echo "  1. Commit Cargo.lock for reproducible Nix builds"
-              echo "  2. (Optional) Commit vendor/ if you need offline/non-Nix builds"
+              echo "  2. Build with: nix build"
               echo ""
-              echo "Note: For Nix builds, Cargo.lock is sufficient. Vendoring is optional."
+              echo "Note: Nix will download and cache dependencies automatically."
+              echo "      No vendoring needed - buildRustPackage handles it."
             '');
           };
         };
