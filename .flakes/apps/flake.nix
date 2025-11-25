@@ -70,12 +70,13 @@
           };
 
           # Update all flake.lock files in root and .flakes/ subdirectories
-          update-flakes = {
+          # Impure operation: modifies flake.lock files in the project directory
+          impure-update-flakes = {
             type = "app";
             meta = {
-              description = "Update flake.lock files for all flakes in root and .flakes/ directories";
+              description = "Update flake.lock files for all flakes in root and .flakes/ directories (impure)";
             };
-            program = toString (pkgs.writeShellScript "update-flakes" ''
+            program = toString (pkgs.writeShellScript "impure-update-flakes" ''
               set -euo pipefail
               
               # Use current directory (where user runs the command), not store path
@@ -106,11 +107,12 @@
               
               # Find all flakes in .flakes/ subdirectories
               if [ -d "$PROJECT_ROOT/.flakes" ]; then
+                # Collect all flake files first, then process them
                 find "$PROJECT_ROOT/.flakes" -mindepth 2 -maxdepth 2 -name "flake.nix" -type f 2>/dev/null | while read -r flake_file; do
                   flake_dir=$(dirname "$flake_file")
                   flake_name=".flakes/$(basename "$flake_dir")"
-                  echo "$flake_name|$flake_dir" >> "$temp_file"
-                done || true
+                  echo "$flake_name|$flake_dir"
+                done >> "$temp_file" || true
               fi
               
               # Count flakes
