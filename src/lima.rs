@@ -116,16 +116,16 @@ fn is_instance_running(instance_name: &str) -> Result<bool> {
 /// Create a Lima instance from a YAML file
 /// Returns true if the instance was started by create, false otherwise
 fn create_lima_instance(instance_name: &str, config_path: &Path) -> Result<bool> {
-    // Use echo to pipe "n" to limactl create to skip starting the instance
-    // We'll start it separately to have better control
     let config_path_str = config_path
         .to_str()
         .context("Lima config path contains invalid UTF-8")?;
-
+    
+    // Use --yes to skip the "Do you want to start the instance now?" prompt
+    // Answer "n" via echo to skip starting during create (we'll start separately)
     let status = Command::new("sh")
         .arg("-c")
         .arg(format!(
-            "echo 'n' | limactl create --tty=false --name {} {}",
+            "echo 'n' | limactl create --yes --name {} {}",
             instance_name, config_path_str
         ))
         .status()
