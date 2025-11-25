@@ -102,7 +102,10 @@
                   local rel_path=$(realpath --relative-to="$PROJECT_ROOT" "$flake_dir" 2>/dev/null || echo "$flake_dir" | sed "s|^$PROJECT_ROOT/||")
                   local tmp_lock_path="$lock_files_tmp/$rel_path/flake.lock"
                   mkdir -p "$(dirname "$tmp_lock_path")"
+                  # Copy lock file to temp directory
                   cp "$lock_file" "$tmp_lock_path"
+                  # Remove lock file from work tree to keep repo clean for next update
+                  rm -f "$lock_file"
                 fi
               }
               
