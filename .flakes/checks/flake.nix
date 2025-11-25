@@ -29,6 +29,17 @@
             touch $out
           '';
 
+          # Check Nix code formatting
+          nix-fmt-check = pkgs.runCommand "nix-fmt-check"
+            {
+              nativeBuildInputs = with pkgs; [ nixpkgs-fmt findutils ];
+            } ''
+            cd ${projectRoot}
+            echo "Checking Nix code formatting..."
+            find . -name "*.nix" -type f -print0 | xargs -0 -r nixpkgs-fmt --check
+            touch $out
+          '';
+
           # Check Rust code formatting
           rust-fmt-check = pkgs.runCommand "rust-fmt-check"
             {
