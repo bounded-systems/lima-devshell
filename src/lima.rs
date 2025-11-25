@@ -4,9 +4,8 @@ use anyhow::{Context as AnyhowContext, Result};
 use std::collections::hash_map::DefaultHasher;
 use std::env;
 use std::hash::{Hash, Hasher};
-use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 // Lima VM configuration constants
 pub const VM_TYPE: &str = "vz";
