@@ -18,4 +18,5 @@ target/
 
 # Cargo home (if using custom CARGO_HOME)
 .cargo/
+vendor/
 
