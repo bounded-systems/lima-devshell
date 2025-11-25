@@ -25,6 +25,7 @@
           # Check that the root flake is valid
           flake-check = pkgs.runCommand "flake-check" { } ''
             echo "Checking root flake validity..."
+            export NIX_CONFIG="experimental-features = nix-command flakes"
             ${pkgs.nix}/bin/nix flake check ${projectRoot} --no-build
             touch $out
           '';
