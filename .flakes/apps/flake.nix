@@ -105,10 +105,15 @@
                 echo "root|$PROJECT_ROOT" >> "$temp_file"
               fi
               
-              # Find all flakes in .flakes/ subdirectories
+              # Find all flakes in .flakes/ directory and subdirectories
               # Use a separate temp file for find output to avoid subshell issues
               find_temp=$(mktemp)
               if [ -d "$PROJECT_ROOT/.flakes" ]; then
+                # First, add .flakes/flake.nix if it exists (depth 1)
+                if [ -f "$PROJECT_ROOT/.flakes/flake.nix" ]; then
+                  echo ".flakes|$PROJECT_ROOT/.flakes" >> "$temp_file"
+                fi
+                # Then find flakes in subdirectories (depth 2)
                 find "$PROJECT_ROOT/.flakes" -mindepth 2 -maxdepth 2 -name "flake.nix" -type f 2>/dev/null > "$find_temp" || true
                 while read -r flake_file; do
                   flake_dir=$(dirname "$flake_file")
