@@ -26,9 +26,9 @@
             cd "$project_root"
 
             echo "Formatting Nix files..."
-            # Only format root-level and dev/ nix files, skip .flakes and vendor
+            # Format all nix files including .flakes directory
             # nixpkgs-fmt can handle multiple files at once
-            find . -maxdepth 2 -name "*.nix" -type f ! -path "./.flakes/*" ! -path "./vendor/*" ! -path "./.git/*" -print0 | xargs -0 -r nixpkgs-fmt
+            find . -name "*.nix" -type f -print0 | xargs -0 -r nixpkgs-fmt
 
             echo "Formatting Rust files..."
             cargo fmt --all
