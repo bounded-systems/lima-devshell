@@ -175,35 +175,30 @@
                 
                 # Update the flake
                 # Nix refuses to update flakes with path inputs pointing to git repos with uncommitted changes
-                # Solution: Update only non-path inputs (nixpkgs, flake-utils, crane, etc.)
+                # Solution: Update only non-path inputs individually (nixpkgs, flake-utils, crane, etc.)
                 local update_success=false
-                local update_output
+                local updated_inputs=0
+                local failed_inputs=0
                 
-                # Get list of inputs from the flake
-                local inputs
-                inputs=$(cd "$flake_dir" && nix flake metadata --json 2>/dev/null | grep -o '"name": "[^"]*"' | sed 's/"name": "\([^"]*\)"/\1/' || echo "")
-                
-                # Try updating all inputs first
-                update_output=$(cd "$flake_dir" && nix flake update --no-warn-dirty 2>&1)
-                if [ $? -eq 0 ]; then
+                # Try updating all inputs first (works if no path inputs or repo is clean)
+                if (cd "$flake_dir" && nix flake update --no-warn-dirty >/dev/null 2>&1); then
                   update_success=true
                 else
-                  # If that failed, try updating only non-path inputs
-                  # Common non-path inputs: nixpkgs, flake-utils, crane, systems
+                  # If that failed, update non-path inputs individually
+                  # Common non-path inputs that should be updated
                   for input in nixpkgs flake-utils crane systems; do
-                    update_output=$(cd "$flake_dir" && nix flake update --no-warn-dirty "$input" 2>&1)
-                    if [ $? -eq 0 ]; then
+                    if (cd "$flake_dir" && nix flake update --no-warn-dirty "$input" >/dev/null 2>&1); then
+                      ((updated_inputs++))
                       update_success=true
+                    else
+                      ((failed_inputs++))
                     fi
                   done
                   
-                  # If still no success, check the error
-                  if [ "$update_success" = false ]; then
-                    if echo "$update_output" | grep -q "uncommitted changes"; then
-                      echo "  ⚠ Skipped: Uncommitted changes in path inputs"
-                      echo "  Note: Path inputs (like project-root) cannot be updated with uncommitted changes"
-                      echo "  Hint: The flake's non-path inputs were updated if possible"
-                    fi
+                  # If we updated at least one input, consider it a partial success
+                  if [ $updated_inputs -gt 0 ]; then
+                    update_success=true
+                    echo "  ⚠ Partially updated: $updated_inputs input(s) updated (path inputs skipped due to uncommitted changes)"
                   fi
                 fi
                 
