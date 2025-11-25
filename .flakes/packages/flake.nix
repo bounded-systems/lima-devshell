@@ -22,9 +22,7 @@
         projectRoot = toString project-root;
 
         # Initialize crane using mkLib
-        craneLib = crane.mkLib {
-          inherit pkgs;
-        };
+        craneLib = crane.mkLib pkgs;
 
         # Filter source files (excludes vendor, target, etc.)
         src = craneLib.cleanCargoSource (craneLib.path projectRoot);
