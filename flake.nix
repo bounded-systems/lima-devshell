@@ -32,7 +32,7 @@
             direnv            # optional but handy, remove if not needed
           ];
 
-          # Keep this very small and focused
+          # Helper script for entering project devshells
           shellHook = ''
             # Enable modern nix features inside this shell
             export NIX_CONFIG="experimental-features = nix-command flakes"
@@ -40,9 +40,14 @@
             # Common place for worktrees inside Lima
             export WORKTREES=/worktrees
 
+            # Path to helper script (available in bootstrap flake directory)
+            BOOTSTRAP_DIR="/worktrees/io.github/bdelanghe/lima-devshell"
+            export LIMA_DEVSHELL_SCRIPT="$BOOTSTRAP_DIR/bin/enter-project-devshell.sh"
+
             # Optional quality-of-life: show where we are
             echo "[lima-devshell] WORKTREES=$WORKTREES"
             echo "[lima-devshell] Nix version: $(nix --version 2>/dev/null || echo 'nix not found')"
+            echo "[lima-devshell] Helper script: $LIMA_DEVSHELL_SCRIPT"
 
             # Optional in-VM worktree guard (belt-and-suspenders check)
             if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
