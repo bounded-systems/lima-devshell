@@ -19,7 +19,6 @@
         };
         # All tools come from nixpkgs input (deterministic)
         cargo = pkgs.cargo;
-        nix = pkgs.nix;
         findutils = pkgs.findutils;
         # Project root from input
         projectRoot = toString project-root;
@@ -79,8 +78,9 @@
             program = toString (pkgs.writeShellScript "update-flakes" ''
               set -euo pipefail
               
-              # Ensure nix and find are available
-              export PATH="${nix}/bin:${findutils}/bin:$PATH"
+              # Use system nix (Determinate Systems) from PATH
+              # Ensure find is available
+              export PATH="${findutils}/bin:$PATH"
               
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               echo "  Flake Update Tool"
@@ -100,7 +100,7 @@
                 echo "Updating: $flake_name"
                 echo "  Directory: $flake_dir"
                 
-                if (cd "$flake_dir" && ${nix}/bin/nix flake update); then
+                if (cd "$flake_dir" && nix flake update); then
                   echo "  ✓ Updated successfully"
                   ((updated++))
                 else
