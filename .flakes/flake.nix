@@ -58,12 +58,13 @@
       # Lib output maps directly to lib subflake (not system-specific)
       lib = lib-flake.lib;
       # Apps output: apps.${system} structure
-      apps = forAllSystems (system: apps-flake.apps.${system});
+      # Note: subflakes use forAllSystems which creates ${system}.apps, so we need to access it correctly
+      apps = forAllSystems (system: apps-flake.${system}.apps);
       # Checks output: checks.${system} structure
-      checks = forAllSystems (system: checks-flake.checks.${system});
+      checks = forAllSystems (system: checks-flake.${system}.checks);
       # Formatter output: formatter.${system} structure
-      formatter = forAllSystems (system: formatter-flake.formatter.${system});
+      formatter = forAllSystems (system: formatter-flake.${system}.formatter);
       # Packages output: packages.${system} structure
-      packages = forAllSystems (system: packages-flake.packages.${system});
+      packages = forAllSystems (system: packages-flake.${system}.packages);
     };
 }
