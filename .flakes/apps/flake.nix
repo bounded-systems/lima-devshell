@@ -12,7 +12,10 @@
   outputs = { self, nixpkgs, project-root, ... }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
-      forAllSystems = f: nixpkgs.lib.genAttrs systems f;
+      # Import nixpkgs for lib access
+      pkgsFor = system: import nixpkgs { inherit system; };
+      lib = (pkgsFor "x86_64-linux").lib;
+      forAllSystems = f: lib.genAttrs systems f;
     in
     forAllSystems (system:
       let
