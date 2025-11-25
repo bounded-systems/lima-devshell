@@ -36,6 +36,9 @@
           # before flakes get involved. This makes the dependency graph reproducible.
           lock-deps = {
             type = "app";
+            meta = {
+              description = "Generate/update Cargo.lock for reproducible builds";
+            };
             program = toString (pkgs.writeShellScript "lock-deps" ''
               set -euo pipefail
               cd ${projectRoot}
@@ -58,6 +61,9 @@
           # vendored or pinned, and no network access is needed.
           vendor-deps = {
             type = "app";
+            meta = {
+              description = "Create vendor/ directory for offline builds";
+            };
             program = toString (pkgs.writeShellScript "vendor-deps" ''
               set -euo pipefail
               cd ${projectRoot}
@@ -88,6 +94,9 @@
           # (E) Normalize structure - basic validation
           prep = {
             type = "app";
+            meta = {
+              description = "Complete Rust pre-Nix preparation pipeline (lock, vendor, validate)";
+            };
             program = toString (pkgs.writeShellScript "prep" ''
               set -euo pipefail
               cd ${projectRoot}

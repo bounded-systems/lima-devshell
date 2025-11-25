@@ -18,7 +18,7 @@
     flakes.inputs.project-root.follows = "project-root";
   };
 
-  outputs = { self, nixpkgs, flake-utils, flakes, project-root }:
+  outputs = { self, nixpkgs, flake-utils, flakes }:
     # Delegate all outputs to .flakes flake
     # Project root is passed to .flakes via follows (non-flake path input)
     flakes;
