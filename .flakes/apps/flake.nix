@@ -106,13 +106,16 @@
               fi
               
               # Find all flakes in .flakes/ subdirectories
+              # Use a separate temp file for find output to avoid subshell issues
+              find_temp=$(mktemp)
               if [ -d "$PROJECT_ROOT/.flakes" ]; then
-                # Collect all flake files first, then process them
-                find "$PROJECT_ROOT/.flakes" -mindepth 2 -maxdepth 2 -name "flake.nix" -type f 2>/dev/null | while read -r flake_file; do
+                find "$PROJECT_ROOT/.flakes" -mindepth 2 -maxdepth 2 -name "flake.nix" -type f 2>/dev/null > "$find_temp" || true
+                while read -r flake_file; do
                   flake_dir=$(dirname "$flake_file")
                   flake_name=".flakes/$(basename "$flake_dir")"
-                  echo "$flake_name|$flake_dir"
-                done >> "$temp_file" || true
+                  echo "$flake_name|$flake_dir" >> "$temp_file"
+                done < "$find_temp"
+                rm -f "$find_temp"
               fi
               
               # Count flakes
