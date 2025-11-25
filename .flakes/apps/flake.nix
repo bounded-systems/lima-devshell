@@ -175,29 +175,37 @@
                 
                 # Update the flake
                 # Nix refuses to update flakes with path inputs pointing to git repos with uncommitted changes
-                # Solution: Update only non-path inputs individually (nixpkgs, flake-utils, crane, etc.)
+                # Solution: Use --override-input to bypass path input checks, or update non-path inputs individually
                 local update_success=false
                 local updated_inputs=0
-                local failed_inputs=0
                 
                 # Try updating all inputs first (works if no path inputs or repo is clean)
                 if (cd "$flake_dir" && nix flake update --no-warn-dirty >/dev/null 2>&1); then
                   update_success=true
                 else
-                  # If that failed, update non-path inputs individually
-                  # Common non-path inputs that should be updated
+                  # If that failed, try to update non-path inputs by overriding the path input
+                  # This allows us to update other inputs even with uncommitted changes
+                  local path_input=""
+                  # Try to detect path inputs (usually project-root)
+                  if (cd "$flake_dir" && nix flake metadata --json 2>/dev/null | grep -q '"project-root"'); then
+                    path_input="project-root"
+                  fi
+                  
+                  # Update non-path inputs individually, overriding path input if needed
                   for input in nixpkgs flake-utils crane systems; do
-                    if (cd "$flake_dir" && nix flake update --no-warn-dirty "$input" >/dev/null 2>&1); then
+                    local update_cmd="nix flake update --no-warn-dirty $input"
+                    if [ -n "$path_input" ]; then
+                      # Override the path input to bypass git check
+                      update_cmd="nix flake update --no-warn-dirty --override-input $path_input path:$PROJECT_ROOT $input"
+                    fi
+                    if (cd "$flake_dir" && $update_cmd >/dev/null 2>&1); then
                       ((updated_inputs++))
                       update_success=true
-                    else
-                      ((failed_inputs++))
                     fi
                   done
                   
-                  # If we updated at least one input, consider it a partial success
+                  # If we updated at least one input, show partial success
                   if [ $updated_inputs -gt 0 ]; then
-                    update_success=true
                     echo "  ⚠ Partially updated: $updated_inputs input(s) updated (path inputs skipped due to uncommitted changes)"
                   fi
                 fi
