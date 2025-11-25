@@ -239,27 +239,28 @@
                   
                   if [ "$actually_changed" = true ]; then
                     update_success=true
-                    # Don't stash if nothing changed - keep the lock file in the work tree
                   else
                     echo "  ⚠ No changes: Lock file unchanged (inputs already up to date)"
                     update_success=true  # Still count as success, just no changes needed
                     ((already_up_to_date++))
-                    # Don't stash if nothing changed
                     return
                   fi
                 else
-                  # If that failed, try without --no-warn-dirty
-                  update_output=$(cd "$flake_dir" && nix flake update 2>&1)
-                  if [ $? -eq 0 ]; then
-                    update_success=true
+                  # Check for specific error types in the output
+                  if echo "$update_output" | grep -qE "(HTTP error 403|unable to download|rate limit)"; then
+                    echo "  ⚠ Network error: GitHub API rate limit or authentication issue"
+                    echo "  Hint: Wait a few minutes and try again, or check your GitHub token"
+                  elif echo "$update_output" | grep -q "uncommitted changes"; then
+                    echo "  ⚠ Skipped: Uncommitted changes detected"
                   else
-                    # Show error message
-                    if echo "$update_output" | grep -q "uncommitted changes"; then
-                      echo "  ⚠ Skipped: Uncommitted changes detected"
-                    else
-                      echo "  Error: $(echo "$update_output" | head -1)"
+                    # Show first meaningful error line
+                    local error_line=$(echo "$update_output" | grep -i "error" | head -1 || echo "$update_output" | head -1)
+                    if [ -n "$error_line" ]; then
+                      echo "  Error: $error_line"
                     fi
                   fi
+                  # Don't try again without --no-warn-dirty if we got a network error
+                  # The issue is likely not related to uncommitted changes
                 fi
                 
                 if [ "$update_success" = true ]; then
