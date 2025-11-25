@@ -3,7 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
     crane.url = "github:ipetkov/crane";
     
     # Project root path (git repo root) - non-flake path input
@@ -29,9 +28,8 @@
     # Formatter flake
     formatter-flake.url = "path:./formatter";
     
-    # Share nixpkgs and flake-utils with formatter flake
+    # Share nixpkgs with formatter flake
     formatter-flake.inputs.nixpkgs.follows = "nixpkgs";
-    formatter-flake.inputs.flake-utils.follows = "flake-utils";
     
     # Packages flake
     packages-flake.url = "path:./packages";
@@ -48,11 +46,15 @@
     lib-flake.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, flake-utils, project-root, apps-flake, checks-flake, formatter-flake, packages-flake, lib-flake, ... }:
+  outputs = { self, nixpkgs, project-root, apps-flake, checks-flake, formatter-flake, packages-flake, lib-flake, ... }:
+    let
+      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      forAllSystems = f: nixpkgs.lib.genAttrs systems f;
+    in
     {
       # Lib output maps directly to lib subflake (not system-specific)
       lib = lib-flake.lib;
-    } // flake-utils.lib.eachDefaultSystem (system:
+    } // forAllSystems (system:
       {
         # Apps output maps directly to apps subflake
         apps = apps-flake.apps.${system};

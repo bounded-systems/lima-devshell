@@ -3,7 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
 
     # Project root path (git repo root) - non-flake path input
     project-root.url = "path:.";
@@ -18,7 +17,7 @@
     flakes.inputs.project-root.follows = "project-root";
   };
 
-  outputs = { self, nixpkgs, flake-utils, flakes, project-root, ... }:
+  outputs = { self, nixpkgs, flakes, project-root, ... }:
     # Re-export only valid outputs from .flakes flake
     # Project root is passed to .flakes via follows (non-flake path input)
     {

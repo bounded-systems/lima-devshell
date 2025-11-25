@@ -3,7 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
     crane.url = "github:ipetkov/crane";
     # Project root path (git repo root) - non-flake path input
     # Default to parent directory for standalone use, overridden by parent via follows
@@ -11,8 +10,12 @@
     project-root.flake = false;
   };
 
-  outputs = { self, nixpkgs, flake-utils, crane, project-root }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs = { self, nixpkgs, crane, project-root }:
+    let
+      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      forAllSystems = f: nixpkgs.lib.genAttrs systems f;
+    in
+    forAllSystems (system:
       let
         pkgs = import nixpkgs {
           inherit system;
