@@ -78,6 +78,12 @@
             program = toString (pkgs.writeShellScript "update-flakes" ''
               set -euo pipefail
               
+              # Use current directory (where user runs the command), not store path
+              # User should run this from the project root
+              PROJECT_ROOT="''${PROJECT_ROOT:-$PWD}"
+              cd "$PROJECT_ROOT" || { echo "Error: Cannot access project root: $PROJECT_ROOT" >&2; exit 1; }
+              PROJECT_ROOT=$(pwd)
+              
               # Use system nix (Determinate Systems) from PATH
               # Ensure find is available
               export PATH="${findutils}/bin:$PATH"
@@ -86,19 +92,21 @@
               echo "  Flake Update Tool"
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               echo ""
+              echo "Project root: $PROJECT_ROOT"
+              echo ""
               
               # Collect all flakes first (using temp file to avoid subshell issues)
               temp_file=$(mktemp)
               trap "rm -f $temp_file" EXIT
               
               # Add root flake if it exists
-              if [ -f "${projectRoot}/flake.nix" ]; then
-                echo "root|${projectRoot}" >> "$temp_file"
+              if [ -f "$PROJECT_ROOT/flake.nix" ]; then
+                echo "root|$PROJECT_ROOT" >> "$temp_file"
               fi
               
               # Find all flakes in .flakes/ subdirectories
-              if [ -d "${projectRoot}/.flakes" ]; then
-                find "${projectRoot}/.flakes" -mindepth 2 -maxdepth 2 -name "flake.nix" -type f 2>/dev/null | while read -r flake_file; do
+              if [ -d "$PROJECT_ROOT/.flakes" ]; then
+                find "$PROJECT_ROOT/.flakes" -mindepth 2 -maxdepth 2 -name "flake.nix" -type f 2>/dev/null | while read -r flake_file; do
                   flake_dir=$(dirname "$flake_file")
                   flake_name=".flakes/$(basename "$flake_dir")"
                   echo "$flake_name|$flake_dir" >> "$temp_file"
