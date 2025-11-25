@@ -9,7 +9,7 @@
     };
     # Dev flake for local development
     dev = {
-      url = "path:./dev";
+      url = "path:./.flakes";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

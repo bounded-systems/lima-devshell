@@ -9,7 +9,7 @@ The root `flake.nix` is focused on:
 - Providing the bootstrap devshell for Lima VMs
 - Home Manager configuration for macOS
 
-This `dev/flake.nix` provides:
+This `.flakes/flake.nix` provides:
 - Full Rust development toolchain (rustc, cargo, rustfmt, clippy)
 - Development tools (rust-analyzer, gdb, etc.)
 - All build dependencies needed for local development
@@ -18,10 +18,10 @@ This `dev/flake.nix` provides:
 
 ### Enter Development Shell
 
-From the `dev/` directory:
+From the `.flakes/` directory:
 
 ```bash
-cd dev
+cd .flakes
 nix develop
 ```
 
@@ -32,7 +32,7 @@ This will enter a development shell with all Rust tools and dependencies.
 You can also run commands without entering the shell:
 
 ```bash
-cd dev
+cd .flakes
 nix fmt              # Format nix files
 nix run .#fmt-rust   # Format Rust code
 nix run .#check      # Run all checks
@@ -45,7 +45,7 @@ nix flake check      # Check flake validity
 
 1. **Enter dev shell:**
    ```bash
-   cd dev
+   cd .flakes
    nix develop
    ```
 
@@ -72,7 +72,7 @@ nix flake check      # Check flake validity
 
 6. **Format code:**
    ```bash
-   nix fmt          # Format nix files (from dev directory)
+   nix fmt          # Format nix files (from .flakes directory)
    nix run .#fmt-rust  # Format Rust code
    ```
 
@@ -101,7 +101,7 @@ The dev flake exports `devShell` as an output that can be referenced from the ro
 ```nix
 # In root flake.nix inputs:
 dev = {
-  url = "path:./dev";
+  url = "path:./.flakes";
   inputs.nixpkgs.follows = "nixpkgs";
 };
 
@@ -112,7 +112,7 @@ dev = {
 Or reference it directly:
 ```bash
 # From project root
-nix develop ./dev
+nix develop ./.flakes
 ```
 
 ## Structure
@@ -131,7 +131,7 @@ This separation allows:
 
 ### Shell Hook
 
-The shell hook is stored in `dev/shell-hook.sh` and read by the flake using `builtins.readFile`. This makes it:
+The shell hook is stored in `.flakes/shell-hook.sh` and read by the flake using `builtins.readFile`. This makes it:
 - Easier to edit (no Nix string escaping)
 - Syntax-highlighted in editors
 - Version-controlled separately from the flake logic

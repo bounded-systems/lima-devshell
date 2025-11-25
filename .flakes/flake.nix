@@ -5,7 +5,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     flake-utils.url = "github:numtide/flake-utils";
     
-    # Project root (parent of dev directory)
+    # Project root (parent of .flakes directory)
     project-root.url = "path:..";
     
     # Each canonical output type is its own flake
