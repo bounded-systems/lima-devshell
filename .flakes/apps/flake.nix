@@ -87,37 +87,40 @@
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               echo ""
               
-              # Collect all flakes first
-              declare -a flake_dirs=()
-              declare -a flake_names=()
+              # Collect all flakes first (using temp file to avoid subshell issues)
+              temp_file=$(mktemp)
+              trap "rm -f $temp_file" EXIT
               
               # Add root flake if it exists
               if [ -f "${projectRoot}/flake.nix" ]; then
-                flake_dirs+=("${projectRoot}")
-                flake_names+=("root")
+                echo "root|${projectRoot}" >> "$temp_file"
               fi
               
               # Find all flakes in .flakes/ subdirectories
               if [ -d "${projectRoot}/.flakes" ]; then
-                while IFS= read -r flake_file; do
+                find "${projectRoot}/.flakes" -mindepth 2 -maxdepth 2 -name "flake.nix" -type f 2>/dev/null | while read -r flake_file; do
                   flake_dir=$(dirname "$flake_file")
                   flake_name=".flakes/$(basename "$flake_dir")"
-                  flake_dirs+=("$flake_dir")
-                  flake_names+=("$flake_name")
-                done < <(find "${projectRoot}/.flakes" -mindepth 2 -maxdepth 2 -name "flake.nix" -type f 2>/dev/null || true)
+                  echo "$flake_name|$flake_dir" >> "$temp_file"
+                done || true
               fi
               
+              # Count flakes
+              flake_count=$(wc -l < "$temp_file" 2>/dev/null || echo "0")
+              
               # List all flakes found
-              if [ ${#flake_dirs[@]} -eq 0 ]; then
+              if [ "$flake_count" -eq 0 ]; then
                 echo "No flakes found to update."
                 exit 0
               fi
               
-              echo "Found ${#flake_dirs[@]} flake(s):"
-              for i in "''${!flake_names[@]}"; do
-                echo "  $((i+1)). ''${flake_names[i]}"
-                echo "     ''${flake_dirs[i]}"
-              done
+              echo "Found $flake_count flake(s):"
+              line_num=1
+              while IFS='|' read -r flake_name flake_dir; do
+                echo "  $line_num. $flake_name"
+                echo "     $flake_dir"
+                ((line_num++))
+              done < "$temp_file"
               echo ""
               
               # Track success/failure
@@ -145,9 +148,9 @@
               }
               
               # Update all collected flakes
-              for i in "''${!flake_dirs[@]}"; do
-                update_flake "''${flake_dirs[i]}" "''${flake_names[i]}"
-              done
+              while IFS='|' read -r flake_name flake_dir; do
+                update_flake "$flake_dir" "$flake_name"
+              done < "$temp_file"
               
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               echo "  Summary"
