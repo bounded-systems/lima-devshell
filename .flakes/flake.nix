@@ -5,15 +5,13 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     flake-utils.url = "github:numtide/flake-utils";
     
-    # Project root (parent of .flakes directory)
-    project-root.url = "path:..";
-    
     # Apps flake
     apps-flake.url = "path:./apps";
     
-    # Share nixpkgs and project-root with apps flake
+    # Share nixpkgs with apps flake
+    # Project root is the parent directory (where Cargo.toml is)
     apps-flake.inputs.nixpkgs.follows = "nixpkgs";
-    apps-flake.inputs.project-root.follows = "project-root";
+    apps-flake.inputs.project-root.url = "path:..";
   };
 
   outputs = { self, nixpkgs, flake-utils, apps-flake }:
