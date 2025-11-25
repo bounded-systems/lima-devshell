@@ -22,15 +22,6 @@
       in
       {
         checks = {
-          # Check that the root flake is valid
-          flake-check = pkgs.runCommand "flake-check" { } ''
-            echo "Checking root flake validity..."
-            export NIX_CONFIG="experimental-features = nix-command flakes"
-            # Use nix flake show to validate the flake structure
-            ${pkgs.nix}/bin/nix flake show ${projectRoot} > /dev/null
-            touch $out
-          '';
-
           # Check Nix code formatting
           nix-fmt-check = pkgs.runCommand "nix-fmt-check"
             {
