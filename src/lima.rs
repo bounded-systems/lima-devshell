@@ -4,7 +4,7 @@ use anyhow::{Context as AnyhowContext, Result};
 use std::collections::hash_map::DefaultHasher;
 use std::env;
 use std::hash::{Hash, Hasher};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 // Lima VM configuration constants
@@ -87,7 +87,7 @@ provision:
 }
 
 /// Write Lima YAML configuration to a specific path
-fn write_lima_yaml(instance: &InstanceModel, yaml_path: &PathBuf) -> Result<()> {
+fn write_lima_yaml(instance: &InstanceModel, yaml_path: &Path) -> Result<()> {
     let yaml_content = generate_lima_yaml(instance);
     std::fs::write(yaml_path, yaml_content).context("failed to write Lima YAML configuration")?;
     Ok(())
@@ -112,7 +112,7 @@ fn is_instance_running(instance_name: &str) -> Result<bool> {
 }
 
 /// Create a Lima instance from a YAML file
-fn create_lima_instance(instance_name: &str, config_path: &PathBuf) -> Result<()> {
+fn create_lima_instance(instance_name: &str, config_path: &Path) -> Result<()> {
     let status = Command::new("limactl")
         .args([
             "create",
@@ -147,7 +147,7 @@ fn start_lima_instance(instance_name: &str) -> Result<()> {
 }
 
 /// Ensure Lima instance exists and is running
-pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &PathBuf) -> Result<()> {
+pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &Path) -> Result<()> {
     let lima_home = get_lima_home()?;
     let lima_instance_dir = lima_home.join(&instance.name);
 
