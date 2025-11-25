@@ -26,5 +26,6 @@
       checks = flakes.checks or { };
       formatter = flakes.formatter or { };
       packages = flakes.packages or { };
+      lib = flakes.lib or { };
     };
 }

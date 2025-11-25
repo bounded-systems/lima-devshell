@@ -43,10 +43,19 @@
     packages-flake.inputs.nixpkgs.follows = "nixpkgs";
     packages-flake.inputs.project-root.follows = "project-root";
     packages-flake.inputs.crane.follows = "crane";
+    
+    # Lib flake
+    lib-flake.url = "path:./lib";
+    
+    # Share nixpkgs with lib flake
+    lib-flake.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, flake-utils, project-root, apps-flake, checks-flake, formatter-flake, packages-flake, ... }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs = { self, nixpkgs, flake-utils, project-root, apps-flake, checks-flake, formatter-flake, packages-flake, lib-flake, ... }:
+    {
+      # Lib output maps directly to lib subflake (not system-specific)
+      lib = lib-flake.lib;
+    } // flake-utils.lib.eachDefaultSystem (system:
       {
         # Apps output maps directly to apps subflake
         apps = apps-flake.apps.${system};
