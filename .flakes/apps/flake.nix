@@ -278,8 +278,8 @@
                   if [ -f "$lock_file" ]; then
                     echo "  ✓ Updated successfully"
                     ((updated++))
-                    # Stash lock file changes after successful update to keep repo clean for next update
-                    stash_lock_changes "$flake_dir"
+                    # Save lock file to temp directory after successful update to keep repo clean for next update
+                    save_lock_file "$flake_dir"
                   else
                     echo "  ✗ Update failed: Lock file not found after update"
                     ((failed++))
