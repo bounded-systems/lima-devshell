@@ -142,7 +142,10 @@ pub fn ensure_instance(instance: &InstanceModel) -> Result<()> {
     let lima_instance_dir = PathBuf::from(format!("{}/.lima/{}", home, instance.name));
 
     if !lima_instance_dir.exists() {
-        println!("lima-devshell: creating Lima instance '{}'...", instance.name);
+        println!(
+            "lima-devshell: creating Lima instance '{}'...",
+            instance.name
+        );
         write_lima_yaml(instance)?;
 
         let yaml_path = lima_instance_dir.join("lima.yaml");

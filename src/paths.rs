@@ -9,8 +9,7 @@ pub fn xdg_state_home() -> Result<PathBuf> {
     let xdg_state_home = match env::var("XDG_STATE_HOME") {
         Ok(val) => val,
         Err(_) => {
-            let home = env::var("HOME")
-                .context("HOME environment variable not set")?;
+            let home = env::var("HOME").context("HOME environment variable not set")?;
             format!("{}/.local/state", home)
         }
     };
@@ -22,8 +21,7 @@ pub fn xdg_data_home() -> Result<PathBuf> {
     let xdg_data_home = match env::var("XDG_DATA_HOME") {
         Ok(val) => val,
         Err(_) => {
-            let home = env::var("HOME")
-                .context("HOME environment variable not set")?;
+            let home = env::var("HOME").context("HOME environment variable not set")?;
             format!("{}/.local/share", home)
         }
     };
@@ -51,4 +49,3 @@ pub fn get_relative_path(target: &Path, root: &Path) -> Result<String> {
 pub fn guest_path_for(rel_path: &str) -> String {
     format!("{}/{}", GUEST_WORKTREE_ROOT, rel_path)
 }
-

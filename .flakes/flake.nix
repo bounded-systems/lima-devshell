@@ -23,15 +23,23 @@
     # Share nixpkgs and project-root with checks flake
     checks-flake.inputs.nixpkgs.follows = "nixpkgs";
     checks-flake.inputs.project-root.follows = "project-root";
+    
+    # Formatter flake
+    formatter-flake.url = "path:./formatter";
+    
+    # Share nixpkgs with formatter flake
+    formatter-flake.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, flake-utils, project-root, apps-flake, checks-flake, ... }:
+  outputs = { self, nixpkgs, flake-utils, project-root, apps-flake, checks-flake, formatter-flake, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       {
         # Apps output maps directly to apps subflake
         apps = apps-flake.apps.${system};
         # Checks output maps directly to checks subflake
         checks = checks-flake.checks.${system};
+        # Formatter output maps directly to formatter subflake
+        formatter = formatter-flake.formatter.${system};
       }
     );
 }

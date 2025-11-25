@@ -76,4 +76,3 @@ fi
         BOOTSTRAP_FLAKE_PATH
     )
 }
-
