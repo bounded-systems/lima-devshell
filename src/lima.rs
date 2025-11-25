@@ -116,6 +116,7 @@ fn create_lima_instance(instance_name: &str, config_path: &Path) -> Result<()> {
     let status = Command::new("limactl")
         .args([
             "create",
+            "--tty=false",
             "--name",
             instance_name,
             config_path
