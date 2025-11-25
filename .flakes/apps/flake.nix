@@ -460,21 +460,27 @@
                 fi
                 
                 # Lock the flake (creates/updates lock file without updating inputs)
-                local lock_output
-                if lock_output=$(cd "$flake_dir" && nix flake lock --no-warn-dirty 2>&1); then
-                  # Verify the lock file was created/updated
-                  local lock_file="$flake_dir/flake.lock"
+                local lock_file="$flake_dir/flake.lock"
+                local had_lock_before=false
+                if [ -f "$lock_file" ]; then
+                  had_lock_before=true
+                fi
+                
+                if cd "$flake_dir" && nix flake lock --no-warn-dirty 2>&1; then
+                  # Check if lock file exists now
                   if [ -f "$lock_file" ]; then
                     echo "  ✓ Locked successfully"
                     ((locked++))
                     # Commit lock file immediately after successful lock to keep repo clean
                     commit_lock_file "$flake_dir" "$flake_name"
-                  elif echo "$lock_output" | grep -q "has no inputs"; then
-                    # Flake has no inputs, so no lock file is created - this is expected
+                  elif [ "$had_lock_before" = false ]; then
+                    # No lock file and there wasn't one before - flake likely has no inputs
+                    # This is valid for flakes with no inputs (like templates)
                     echo "  ✓ Locked successfully (no inputs, no lock file needed)"
                     ((locked++))
                   else
-                    echo "  ✗ Lock failed: Lock file not found after lock"
+                    # Had a lock file before but it's gone now - this is an error
+                    echo "  ✗ Lock failed: Lock file disappeared after lock"
                     ((failed++))
                     failed_dirs+=("$flake_name")
                   fi
