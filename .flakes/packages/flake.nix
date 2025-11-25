@@ -37,6 +37,9 @@
             pkg-config
           ];
         };
+
+        # Build cargo artifacts first (dependencies)
+        cargoArtifacts = craneLib.buildCargoArtifacts commonArgs;
       in
       {
         packages = {
@@ -48,6 +51,7 @@
           # This runs clippy on the codebase and produces a derivation
           # that can be built and cached for offline use
           clippy = craneLib.cargoClippy (commonArgs // {
+            inherit cargoArtifacts;
             cargoClippyExtraArgs = "--all-targets -- -D warnings";
           });
 
