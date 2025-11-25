@@ -22,7 +22,7 @@
             set -euo pipefail
 
             # Run from the directory nix fmt is invoked in.
-            project_root="${PROJECT_ROOT:-$PWD}"
+            project_root="''${PROJECT_ROOT:-''$PWD}"
             cd "$project_root"
 
             echo "Formatting Nix files..."
