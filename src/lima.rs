@@ -4,9 +4,9 @@ use anyhow::{Context as AnyhowContext, Result};
 use std::collections::hash_map::DefaultHasher;
 use std::env;
 use std::hash::{Hash, Hasher};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::io::Write;
 
 // Lima VM configuration constants
 pub const VM_TYPE: &str = "vz";
@@ -187,36 +187,31 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &Path) -> Result<
     );
 
     // Check if instance already exists
-    if !lima_instance_dir.exists() {
-        println!(
-            "lima-devshell: creating Lima instance '{}'...",
-            instance.name
-        );
-        create_lima_instance(&instance.name, &local_yaml_path)?;
-        start_lima_instance(&instance.name)?;
-    } else {
+    if lima_instance_dir.exists() {
         // Check if instance is running
         let is_running = is_instance_running(&instance.name)?;
 
-        if !is_running {
-            // Try to start the existing instance
-            println!(
-                "lima-devshell: starting existing Lima instance '{}'...",
-                instance.name
-            );
-
-            // If start fails, the instance might have invalid config - delete and recreate
-            if start_lima_instance(&instance.name).is_err() {
-                println!(
-                    "lima-devshell: instance failed to start, deleting and recreating '{}'...",
-                    instance.name
-                );
-                delete_lima_instance(&instance.name)?;
-                create_lima_instance(&instance.name, &local_yaml_path)?;
-                start_lima_instance(&instance.name)?;
-            }
+        if is_running {
+            // Instance is running, we're good
+            return Ok(());
         }
+
+        // Instance exists but isn't running - delete it to ensure clean state
+        // This prevents issues with stale/cached YAML configurations
+        println!(
+            "lima-devshell: deleting existing instance '{}' to ensure clean configuration...",
+            instance.name
+        );
+        delete_lima_instance(&instance.name)?;
     }
+
+    // Create and start the instance with fresh configuration
+    println!(
+        "lima-devshell: creating Lima instance '{}'...",
+        instance.name
+    );
+    create_lima_instance(&instance.name, &local_yaml_path)?;
+    start_lima_instance(&instance.name)?;
 
     Ok(())
 }
