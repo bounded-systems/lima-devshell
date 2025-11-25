@@ -21,7 +21,7 @@
           # Apps are deterministic wrappers around packages
           # These tools are built deterministically and can be used
           # by the root flake for impure operations (outside sandbox)
-          
+
           # Example: Wrapper around a package
           # my-tool = {
           #   type = "app";

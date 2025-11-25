@@ -4,10 +4,10 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     flake-utils.url = "github:numtide/flake-utils";
-    
+
     # Project root (parent of .flakes directory)
     project-root.url = "path:..";
-    
+
     # Each canonical output type is its own flake
     devShells-flake.url = "path:./devShells";
     checks-flake.url = "path:./checks";
@@ -16,7 +16,7 @@
     packages-flake.url = "path:./packages";
     templates-flake.url = "path:./templates";
     overlays-flake.url = "path:./overlays";
-    
+
     # Share nixpkgs and project-root across all subflakes
     devShells-flake.inputs.nixpkgs.follows = "nixpkgs";
     devShells-flake.inputs.project-root.follows = "project-root";
@@ -42,10 +42,10 @@
         }
       );
     in
-      systemOutputs // {
-        # Non-system-specific outputs
-        templates = templates-flake.templates;
-        overlays = overlays-flake.overlays;
-      };
+    systemOutputs // {
+      # Non-system-specific outputs
+      templates = templates-flake.templates;
+      overlays = overlays-flake.overlays;
+    };
 }
 

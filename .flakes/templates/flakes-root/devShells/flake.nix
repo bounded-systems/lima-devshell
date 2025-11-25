@@ -16,7 +16,7 @@
           inherit system;
           config.allowUnfree = true;
         };
-        
+
         # Tooling packages
         tooling = with pkgs; [
           # Add your development tools here
@@ -25,14 +25,14 @@
           # cargo
           # rustc
         ];
-        
+
         # Environment variables
         env = {
           # Add your environment variables here
           # Example:
           # RUST_BACKTRACE = "1";
         };
-        
+
         # Shell hook
         shellHook = ''
           # Add your shell hook here

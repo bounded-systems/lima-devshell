@@ -22,7 +22,7 @@
         };
         # Project root from input
         projectRoot = toString project-root;
-        
+
         # Initialize crane with the project root
         craneLib = crane.mkCraneLib {
           inherit pkgs;
