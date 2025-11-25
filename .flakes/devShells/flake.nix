@@ -51,13 +51,38 @@
           # No need to set CARGO_HOME - let cargo use default or system location
         };
         
-        # Shell hook (read and display help text, with variable substitution)
-        # Read from .flakes directory relative to project root
-        helpText = builtins.readFile (project-root + "/.flakes/devshell-help.txt");
+        # Shell hook (display help text with variable substitution)
         shellHook = ''
           # Display help text with variable substitution
           cat <<EOF
-          ${helpText}
+          🔧 lima-devshell development environment
+          Rust: $(rustc --version)
+          Cargo: $(cargo --version)
+
+          Environment:
+            RUST_BACKTRACE=$RUST_BACKTRACE
+            RUST_LOG=$RUST_LOG
+
+          Available commands:
+            cargo build          - Build the project
+            cargo build --release - Build release binary
+            cargo test            - Run tests
+            cargo clippy          - Run clippy linter
+            cargo fmt             - Format code
+            cargo update          - Update dependencies (updates Cargo.lock)
+
+          Nix commands:
+            nix fmt               - Format all nix files
+            nix flake check       - Check flake validity
+
+          Cargo locking:
+            Cargo.lock is managed by cargo in the project root
+            Run 'cargo update' to update dependencies and lock file
+            Cargo.lock is gitignored - cargo manages it during builds
+
+          To test the flake build (from project root):
+            nix build
+
           EOF
         '';
       in
