@@ -44,6 +44,9 @@
             pkg-config
           ];
         };
+
+        # Build cargo artifacts first (dependencies)
+        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
       in
       {
         checks = {
@@ -71,6 +74,7 @@
 
           # Run clippy using crane (fetches dependencies from crates.io via Cargo.lock)
           clippy-check = craneLib.cargoClippy (commonArgs // {
+            inherit cargoArtifacts;
             cargoClippyExtraArgs = "--all-targets -- -D warnings";
           });
         };
