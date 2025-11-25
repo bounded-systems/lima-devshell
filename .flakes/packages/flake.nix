@@ -49,7 +49,7 @@
         cargoArtifacts = craneLib.buildDepsOnly commonArgs;
       in
       {
-        packages = {
+        packages = rec {
           # Build the lima-devshell Rust binary using crane
           # Crane automatically fetches dependencies from crates.io using Cargo.lock
           lima-devshell = craneLib.buildPackage commonArgs;
@@ -63,7 +63,7 @@
           });
 
           # Default package
-          default = self.packages.${system}.lima-devshell;
+          default = lima-devshell;
         };
       }
     );
