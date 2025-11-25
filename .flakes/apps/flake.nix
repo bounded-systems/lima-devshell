@@ -10,7 +10,7 @@
     project-root.flake = false;
   };
 
-  outputs = { self, nixpkgs, flake-utils, project-root }:
+  outputs = { self, nixpkgs, flake-utils, project-root, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
         pkgs = import nixpkgs {

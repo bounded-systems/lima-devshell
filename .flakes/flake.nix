@@ -18,7 +18,7 @@
     apps-flake.inputs.project-root.follows = "project-root";
   };
 
-  outputs = { self, nixpkgs, flake-utils, project-root, apps-flake }:
+  outputs = { self, nixpkgs, flake-utils, project-root, apps-flake, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       {
         # Apps output maps directly to apps subflake
