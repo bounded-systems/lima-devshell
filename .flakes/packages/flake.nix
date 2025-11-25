@@ -4,10 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     flake-utils.url = "github:numtide/flake-utils";
-    crane = {
-      url = "github:ipetkov/crane";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    crane.url = "github:ipetkov/crane";
     # Project root path (git repo root) - non-flake path input
     # Default to parent directory for standalone use, overridden by parent via follows
     project-root.url = "path:..";
@@ -27,24 +24,25 @@
         # Initialize crane - crane.lib.${system} is the craneLib
         craneLib = crane.lib.${system};
 
-        # Filter out vendor directory and other non-source files
+        # Filter source files (excludes vendor, target, etc.)
         src = craneLib.cleanCargoSource (craneLib.path projectRoot);
+
+        # Common args for crane builds
+        commonArgs = {
+          inherit src;
+          pname = "lima-devshell";
+          version = "0.1.0";
+          buildInputs = with pkgs; [
+            libgit2
+            pkg-config
+          ];
+        };
       in
       {
         packages = {
           # Build the lima-devshell Rust binary using crane
           # Crane automatically fetches dependencies from crates.io using Cargo.lock
-          lima-devshell = craneLib.buildPackage {
-            inherit src;
-            pname = "lima-devshell";
-            version = "0.1.0";
-            buildInputs = with pkgs; [
-              libgit2
-              pkg-config
-            ];
-            # Crane handles cargo, rustc, and all build dependencies automatically
-            # It uses Cargo.lock to fetch dependencies deterministically
-          };
+          lima-devshell = craneLib.buildPackage commonArgs;
 
           # Default package
           default = self.packages.${system}.lima-devshell;
