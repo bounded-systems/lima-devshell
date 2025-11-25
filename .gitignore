@@ -1,0 +1,14 @@
+# Nix flake artifacts
+result
+result-*
+
+# Flake lock (optional - some prefer to commit it)
+# flake.lock
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
