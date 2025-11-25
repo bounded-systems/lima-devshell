@@ -5,10 +5,17 @@ result-*
 # Flake lock (optional - some prefer to commit it)
 # flake.lock
 
+# Cargo artifacts (cargo manages Cargo.lock, we build artifacts)
+target/
+Cargo.lock
+
 # Editor files
 .vscode/
 .idea/
 *.swp
 *.swo
 .DS_Store
+
+# Cargo home (if using custom CARGO_HOME)
+.cargo/
 

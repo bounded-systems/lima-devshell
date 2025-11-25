@@ -7,6 +7,12 @@
       url = "github:nix-community/home-manager/release-24.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    # Optional: Reference the dev flake for local development
+    # Uncomment to use: nix develop .#dev
+    # dev = {
+    #   url = "path:./dev";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
   };
 
   outputs = { self, nixpkgs, home-manager }:
