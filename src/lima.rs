@@ -89,8 +89,7 @@ provision:
 /// Write Lima YAML configuration to a specific path
 fn write_lima_yaml(instance: &InstanceModel, yaml_path: &PathBuf) -> Result<()> {
     let yaml_content = generate_lima_yaml(instance);
-    std::fs::write(yaml_path, yaml_content)
-        .context("failed to write Lima YAML configuration")?;
+    std::fs::write(yaml_path, yaml_content).context("failed to write Lima YAML configuration")?;
     Ok(())
 }
 
@@ -134,7 +133,10 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &PathBuf) -> Resu
     // Write YAML configuration to the worktree directory (not to home)
     let local_yaml_path = worktree_dir.join("lima.yaml");
     write_lima_yaml(instance, &local_yaml_path)?;
-    println!("lima-devshell: wrote lima.yaml to {}", local_yaml_path.display());
+    println!(
+        "lima-devshell: wrote lima.yaml to {}",
+        local_yaml_path.display()
+    );
 
     // Check if instance already exists
     if !lima_instance_dir.exists() {
