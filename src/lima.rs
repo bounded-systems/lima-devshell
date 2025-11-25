@@ -93,30 +93,51 @@ fn write_lima_yaml(instance: &InstanceModel, yaml_path: &PathBuf) -> Result<()> 
     Ok(())
 }
 
+/// Get Lima home directory (LIMA_HOME or default ~/.lima)
+fn get_lima_home() -> Result<PathBuf> {
+    if let Ok(lima_home) = env::var("LIMA_HOME") {
+        Ok(PathBuf::from(lima_home))
+    } else {
+        let home = env::var("HOME").context("HOME environment variable not set")?;
+        Ok(PathBuf::from(format!("{}/.lima", home)))
+    }
+}
+
 /// Check if a Lima instance is currently running
 fn is_instance_running(instance_name: &str) -> Result<bool> {
-    let home = env::var("HOME").context("HOME environment variable not set")?;
-    let lima_instance_dir = PathBuf::from(format!("{}/.lima/{}", home, instance_name));
+    let lima_home = get_lima_home()?;
+    let lima_instance_dir = lima_home.join(instance_name);
     let socket_path = lima_instance_dir.join("ha.sock");
     Ok(socket_path.exists())
 }
 
-/// Start a Lima instance
-fn start_lima_instance(instance_name: &str, config_path: Option<&PathBuf>) -> Result<()> {
-    let args = if let Some(path) = config_path {
-        vec![
-            "start",
-            path.to_str()
-                .context("Lima config path contains invalid UTF-8")?,
-        ]
-    } else {
-        vec!["start", instance_name]
-    };
-
+/// Create a Lima instance from a YAML file
+fn create_lima_instance(instance_name: &str, config_path: &PathBuf) -> Result<()> {
     let status = Command::new("limactl")
-        .args(&args)
+        .args([
+            "create",
+            "--name",
+            instance_name,
+            config_path
+                .to_str()
+                .context("Lima config path contains invalid UTF-8")?,
+        ])
         .status()
-        .context("failed to execute limactl")?;
+        .context("failed to execute limactl create")?;
+
+    if !status.success() {
+        anyhow::bail!("failed to create Lima instance");
+    }
+
+    Ok(())
+}
+
+/// Start a Lima instance by name
+fn start_lima_instance(instance_name: &str) -> Result<()> {
+    let status = Command::new("limactl")
+        .args(["start", instance_name])
+        .status()
+        .context("failed to execute limactl start")?;
 
     if !status.success() {
         anyhow::bail!("failed to start Lima instance");
@@ -127,8 +148,8 @@ fn start_lima_instance(instance_name: &str, config_path: Option<&PathBuf>) -> Re
 
 /// Ensure Lima instance exists and is running
 pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &PathBuf) -> Result<()> {
-    let home = env::var("HOME").context("HOME environment variable not set")?;
-    let lima_instance_dir = PathBuf::from(format!("{}/.lima/{}", home, instance.name));
+    let lima_home = get_lima_home()?;
+    let lima_instance_dir = lima_home.join(&instance.name);
 
     // Write YAML configuration to the worktree directory (not to home)
     let local_yaml_path = worktree_dir.join("lima.yaml");
@@ -144,7 +165,8 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &PathBuf) -> Resu
             "lima-devshell: creating Lima instance '{}'...",
             instance.name
         );
-        start_lima_instance(&instance.name, Some(&local_yaml_path))?;
+        create_lima_instance(&instance.name, &local_yaml_path)?;
+        start_lima_instance(&instance.name)?;
     } else {
         // Check if instance is running
         let is_running = is_instance_running(&instance.name)?;
@@ -154,7 +176,7 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &PathBuf) -> Resu
                 "lima-devshell: starting existing Lima instance '{}'...",
                 instance.name
             );
-            start_lima_instance(&instance.name, Some(&local_yaml_path))?;
+            start_lima_instance(&instance.name)?;
         }
     }
 
