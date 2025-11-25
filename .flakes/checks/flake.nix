@@ -5,7 +5,8 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     flake-utils.url = "github:numtide/flake-utils";
     # Project root is passed from parent flake via follows
-    project-root.url = "path:../..";
+    # Parent provides the actual path, so we just declare the input
+    project-root.url = "";
   };
 
   outputs = { self, nixpkgs, flake-utils, project-root }:

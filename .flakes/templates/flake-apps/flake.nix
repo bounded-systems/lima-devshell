@@ -5,7 +5,8 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     flake-utils.url = "github:numtide/flake-utils";
     # Project root is passed from parent flake via follows
-    project-root.url = "path:../..";
+    # Parent provides the actual path, so we just declare the input
+    project-root.url = "";
   };
 
   outputs = { self, nixpkgs, flake-utils, project-root }:
@@ -20,12 +21,16 @@
       in
       {
         apps = {
-          # Add your apps here
+          # Add your project-specific apps here
+          # Note: Use 'nix fmt' for formatting nix files
+          # Note: Use 'nix flake check' for flake validation
+          # 
           # Example:
-          # hello = {
+          # test = {
           #   type = "app";
-          #   program = toString (pkgs.writeShellScript "hello" ''
-          #     echo "Hello, world!"
+          #   program = toString (pkgs.writeShellScript "test" ''
+          #     cd ${projectRoot}
+          #     ${pkgs.cargo}/bin/cargo test
           #   '');
           # };
         };

@@ -5,7 +5,8 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
     flake-utils.url = "github:numtide/flake-utils";
     # Project root is passed from parent flake via follows
-    project-root.url = "path:../..";
+    # Parent provides the actual path, so we just declare the input
+    project-root.url = "";
   };
 
   outputs = { self, nixpkgs, flake-utils, project-root }:
@@ -20,44 +21,13 @@
       in
       {
         apps = {
-          # Format all nix files (uses formatter output)
-          fmt = {
-            type = "app";
-            program = toString (pkgs.writeShellScript "fmt" ''
-              cd ${projectRoot}
-              ${pkgs.nixpkgs-fmt}/bin/nixpkgs-fmt flake.nix .flakes/flake.nix
-              echo "Formatted nix files"
-            '');
-          };
-
-          # Format Rust code
+          # Format Rust code (nix fmt handles nix files)
           fmt-rust = {
             type = "app";
             program = toString (pkgs.writeShellScript "fmt-rust" ''
               cd ${projectRoot}
               ${pkgs.cargo}/bin/cargo fmt
               echo "Formatted Rust code"
-            '');
-          };
-
-          # Run all checks
-          check = {
-            type = "app";
-            program = toString (pkgs.writeShellScript "check" ''
-              echo "Running flake check..."
-              ${pkgs.nix}/bin/nix flake check ${projectRoot} --no-build
-              
-              echo ""
-              echo "Running Rust fmt check..."
-              cd ${projectRoot}
-              ${pkgs.cargo}/bin/cargo fmt --check --all
-              
-              echo ""
-              echo "Running clippy..."
-              ${pkgs.cargo}/bin/cargo clippy --all-targets -- -D warnings
-              
-              echo ""
-              echo "All checks passed!"
             '');
           };
 
