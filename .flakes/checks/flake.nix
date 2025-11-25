@@ -24,13 +24,11 @@
         # Project root from input
         projectRoot = toString project-root;
 
-        # Initialize crane for clippy check
-        craneLib = crane.mkCraneLib {
-          inherit pkgs;
-        };
+        # Initialize crane for clippy check - crane.lib.${system} is the craneLib
+        craneLib = crane.lib.${system};
 
         # Filter source files (excludes vendor, target, etc.)
-        src = craneLib.cleanCargoSource (craneLib.path project-root);
+        src = craneLib.cleanCargoSource (craneLib.path projectRoot);
 
         # Common args for crane builds
         commonArgs = {

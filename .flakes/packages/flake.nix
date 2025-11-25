@@ -24,13 +24,11 @@
         # Project root from input
         projectRoot = toString project-root;
 
-        # Initialize crane
-        craneLib = crane.mkCraneLib {
-          inherit pkgs;
-        };
+        # Initialize crane - crane.lib.${system} is the craneLib
+        craneLib = crane.lib.${system};
 
         # Filter out vendor directory and other non-source files
-        src = craneLib.cleanCargoSource (craneLib.path project-root);
+        src = craneLib.cleanCargoSource (craneLib.path projectRoot);
       in
       {
         packages = {
