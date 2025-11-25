@@ -460,7 +460,8 @@
                 fi
                 
                 # Lock the flake (creates/updates lock file without updating inputs)
-                if cd "$flake_dir" && nix flake lock --no-warn-dirty 2>&1; then
+                local lock_output
+                if lock_output=$(cd "$flake_dir" && nix flake lock --no-warn-dirty 2>&1); then
                   # Verify the lock file was created/updated
                   local lock_file="$flake_dir/flake.lock"
                   if [ -f "$lock_file" ]; then
@@ -468,6 +469,10 @@
                     ((locked++))
                     # Commit lock file immediately after successful lock to keep repo clean
                     commit_lock_file "$flake_dir" "$flake_name"
+                  elif echo "$lock_output" | grep -q "has no inputs"; then
+                    # Flake has no inputs, so no lock file is created - this is expected
+                    echo "  ✓ Locked successfully (no inputs, no lock file needed)"
+                    ((locked++))
                   else
                     echo "  ✗ Lock failed: Lock file not found after lock"
                     ((failed++))
