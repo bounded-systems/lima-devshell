@@ -1,13 +1,13 @@
-use crate::app::Context;
+use crate::app::AppContext;
 use crate::paths::GUEST_WORKTREE_ROOT;
 
-// Note: This module depends on app::Context, so it must be declared after app module
+// Note: This module depends on app::AppContext, so it must be declared after app module
 
 pub const BOOTSTRAP_FLAKE_PATH: &str = "/worktrees/io.github/bdelanghe/lima-devshell";
 
 /// Build the bash script that runs inside the Lima VM
 /// This script validates the environment and launches the project's nix develop
-pub fn build_guest_script(ctx: &Context) -> String {
+pub fn build_guest_script(ctx: &AppContext) -> String {
     // Note: We use {{ to escape { in the format string, and }} to escape }
     // For bash ${1:-default}, we need ${{{{1:-default}}}} to get ${1:-default} in output
     format!(

@@ -15,7 +15,7 @@ pub struct Args {
 }
 
 /// Context containing all derived information about the target directory
-pub struct Context {
+pub struct AppContext {
     pub target_dir_host: PathBuf,
     pub host_worktree_root: PathBuf,
     pub rel_path: String,
@@ -38,7 +38,7 @@ pub struct InstanceModel {
     pub repo_name: String,
 }
 
-impl Context {
+impl AppContext {
     /// Build context from CLI arguments
     pub fn from_args(args: Args) -> Result<Self> {
         let target_dir = match args.directory {
@@ -74,7 +74,7 @@ impl Context {
             .unwrap_or("repo.git")
             .to_string();
 
-        Ok(Context {
+        Ok(AppContext {
             target_dir_host: target_dir,
             host_worktree_root,
             rel_path,
@@ -90,7 +90,7 @@ impl Context {
 
 impl InstanceModel {
     /// Build instance model from context
-    pub fn from_context(ctx: &Context) -> Result<Self> {
+    pub fn from_context(ctx: &AppContext) -> Result<Self> {
         let repo_name = if ctx.path_segments.len() >= 3 {
             ctx.path_segments[2].clone()
         } else {
@@ -112,7 +112,7 @@ impl InstanceModel {
 /// Main orchestration function
 pub fn run() -> Result<()> {
     let args = Args::parse();
-    let ctx = Context::from_args(args)?;
+    let ctx = AppContext::from_args(args)?;
     let instance = InstanceModel::from_context(&ctx)?;
 
     println!("lima-devshell: host:  {}", ctx.target_dir_host.display());

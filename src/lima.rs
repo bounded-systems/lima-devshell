@@ -1,4 +1,4 @@
-use crate::app::{Context, InstanceModel};
+use crate::app::{AppContext, InstanceModel};
 use crate::script::build_guest_script;
 use anyhow::{Context as AnyhowContext, Result};
 use std::collections::hash_map::DefaultHasher;
@@ -166,7 +166,7 @@ pub fn ensure_instance(instance: &InstanceModel) -> Result<()> {
 }
 
 /// Enter Lima VM and start Nix devshell
-pub fn enter_devshell(instance: &InstanceModel, ctx: &Context) -> Result<()> {
+pub fn enter_devshell(instance: &InstanceModel, ctx: &AppContext) -> Result<()> {
     let script = build_guest_script(ctx);
 
     let status = Command::new("limactl")

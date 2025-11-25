@@ -16,7 +16,7 @@ pub fn is_git_worktree(dir: &Path) -> Result<bool> {
 pub fn resolve_bare_repo_path(target_dir: &Path) -> Result<PathBuf> {
     let repo = Repository::discover(target_dir).context("failed to discover Git repository")?;
 
-    let workdir = repo
+    let _workdir = repo
         .workdir()
         .context("repository has no work directory (bare repo?)")?;
 
