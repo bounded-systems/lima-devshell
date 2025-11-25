@@ -7,15 +7,14 @@
       url = "github:nix-community/home-manager/release-24.11";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Optional: Reference the dev flake for local development
-    # Uncomment to use: nix develop .#dev
-    # dev = {
-    #   url = "path:./dev";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
+    # Dev flake for local development
+    dev = {
+      url = "path:./dev";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, home-manager }:
+  outputs = { self, nixpkgs, home-manager, dev }:
     let
       lib = nixpkgs.lib;
       systems = [
@@ -42,8 +41,9 @@
       # Rust toolchain for building the lima-devshell app
       rustToolchain = darwinPkgs.rustc;
     in {
+      # Linux devShells for Lima VMs (bootstrap shell)
       devShells = forAllSystems (pkgs: {
-        # The only devShell this flake needs
+        # Bootstrap devShell for Lima VMs
         default = pkgs.mkShell {
           # Minimal set of tools needed to *reach* real devshells
           packages = with pkgs; [
@@ -81,6 +81,11 @@
           '';
         };
       });
+
+      # macOS devShell delegates to dev flake for local development
+      devShells.${darwinSystem} = {
+        default = dev.devShells.${darwinSystem}.default;
+      };
 
       # Home Manager configuration for macOS
       homeConfigurations = {
