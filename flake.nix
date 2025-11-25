@@ -1,10 +1,17 @@
 {
-  description = "Bootstrap devshell for Lima VM (just enough to run project nix devshells)";
+  description = "Bootstrap devshell for Lima VM and Home Manager configuration for macOS";
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+    home-manager = {
+      url = "github:nix-community/home-manager/release-24.11";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
 
-  outputs = { self, nixpkgs }:
+  outputs = { self, nixpkgs, home-manager }:
     let
+      lib = nixpkgs.lib;
       systems = [
         "x86_64-linux"
         "aarch64-linux"
@@ -18,6 +25,16 @@
             };
           in f pkgs
         );
+
+      # macOS-specific configuration (for Home Manager)
+      darwinSystem = "aarch64-darwin";
+      darwinPkgs = import nixpkgs {
+        system = darwinSystem;
+        config.allowUnfree = true;
+      };
+
+      # Rust toolchain for building the lima-devshell app
+      rustToolchain = darwinPkgs.rustc;
     in {
       devShells = forAllSystems (pkgs: {
         # The only devShell this flake needs
@@ -40,14 +57,13 @@
             # Common place for worktrees inside Lima
             export WORKTREES=/worktrees
 
-            # Path to helper script (available in bootstrap flake directory)
+            # Bootstrap flake path (validation logic is now in the Rust CLI)
             BOOTSTRAP_DIR="/worktrees/io.github/bdelanghe/lima-devshell"
-            export LIMA_DEVSHELL_SCRIPT="$BOOTSTRAP_DIR/bin/enter-project-devshell.sh"
 
             # Optional quality-of-life: show where we are
             echo "[lima-devshell] WORKTREES=$WORKTREES"
             echo "[lima-devshell] Nix version: $(nix --version 2>/dev/null || echo 'nix not found')"
-            echo "[lima-devshell] Helper script: $LIMA_DEVSHELL_SCRIPT"
+            echo "[lima-devshell] Bootstrap dir: $BOOTSTRAP_DIR"
 
             # Optional in-VM worktree guard (belt-and-suspenders check)
             if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -59,6 +75,150 @@
           '';
         };
       });
+
+      # Home Manager configuration for macOS
+      homeConfigurations = {
+        "bobby@macos" = home-manager.lib.homeManagerConfiguration {
+          pkgs = darwinPkgs;
+          modules = [
+            ({ config, pkgs, ... }: {
+              # Home Manager needs a bit of information about you and the paths it should
+              # manage.
+              home.username = "bobby";
+              home.homeDirectory = "/Users/bobby";
+
+              # This value determines the Home Manager release that your configuration is
+              # compatible with. This helps avoid breakage when a new Home Manager release
+              # introduces backwards incompatible changes.
+              #
+              # You should not change this value, even if you update Home Manager. If you do
+              # want to update the value, then make sure to first check the Home Manager
+              # release notes.
+              home.stateVersion = "24.11"; # Please read the comment before changing.
+
+              # The home.packages option allows you to install Nix packages into your
+              # environment.
+              home.packages = [
+                # Node.js includes npm and npx
+                pkgs.nodejs
+                # Tools previously managed via nix profile
+                pkgs.act
+                pkgs.gnused
+                pkgs.lima
+                pkgs.yarn
+              ];
+
+              # Home Manager can also manage your environment variables through
+              # 'home.sessionVariables'. If you don't want to manage your shell through Home
+              # Manager, then you have to manually source 'hm-session-vars.sh' located at
+              # either
+              #
+              #  ~/.nix-profile/etc/profile.d/hm-session-vars.sh
+              #
+              # or
+              #
+              #  ~/.local/state/nix/profiles/home-manager/etc/profile.d/hm-session-vars.sh
+              #
+              # or
+              #
+              #  /etc/profiles/per-user/bobby/etc/profile.d/hm-session-vars.sh
+              #
+              home.sessionVariables = {
+                # Ensure Nix profiles are on PATH (Determinate Systems setup)
+                # These paths are prepended to ensure nix and home-manager are available
+                PATH = "$HOME/.local/state/nix/profile/bin:/nix/var/nix/profiles/default/bin:$PATH";
+              };
+
+              # Let Home Manager install and manage itself.
+              programs.home-manager.enable = true;
+
+              # Git configuration
+              programs.git = {
+                enable = true;
+                package = pkgs.gitFull;
+                
+                signing = {
+                  signByDefault = true;
+                  key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIFg8BuJEdvi25G0YsNSv7ixLTOhazoJ4M4sNB1YY7pBL";
+                };
+                
+                settings = {
+                  user.name = "Robert DeLanghe";
+                  user.email = "1240090+bdelanghe@users.noreply.github.com";
+                  gpg.format = "ssh";
+                  gpg.ssh.program = "/Applications/1Password.app/Contents/MacOS/op-ssh-sign";
+                };
+              };
+
+              # Enable devcontainers CLI
+              programs.devcontainers-cli = {
+                enable = true;
+              };
+
+              # GitHub CLI configuration
+              programs.gh = {
+                enable = true;
+                settings = {
+                  git_protocol = "ssh";
+                  prompt = "enabled";
+                };
+              };
+
+              # direnv configuration
+              programs.direnv = {
+                enable = true;
+                nix-direnv.enable = true;
+              };
+
+              # zsh integration - add lima-devshell command from the flake app
+              programs.zsh = {
+                enable = true;
+                enableCompletion = true;
+                initExtra = ''
+                  # lima-devshell: Use the Rust CLI from the flake
+                  lima-devshell() {
+                    ${self.apps.${darwinSystem}.lima-devshell.program} "$@"
+                  }
+                '';
+              };
+            })
+          ];
+        };
+      };
+
+      # Formatter for nix files (Determinate Systems compatible)
+      formatter.${darwinSystem} = darwinPkgs.nixpkgs-fmt;
+
+      # Build the Rust binary
+      packages.${darwinSystem} = {
+        lima-devshell = darwinPkgs.rustPlatform.buildRustPackage {
+          pname = "lima-devshell";
+          version = "0.1.0";
+          src = ./.;
+          # Use cargoHash - first build will fail with the correct hash to use
+          cargoHash = lib.fakeHash;
+          buildInputs = with darwinPkgs; [
+            libgit2
+            pkg-config
+          ];
+          nativeBuildInputs = with darwinPkgs; [
+            rustToolchain
+            pkg-config
+          ];
+        };
+      };
+
+      # App output for running lima-devshell
+      apps.${darwinSystem} = {
+        default = {
+          type = "app";
+          program = "${self.packages.${darwinSystem}.lima-devshell}/bin/lima-devshell";
+        };
+        lima-devshell = {
+          type = "app";
+          program = "${self.packages.${darwinSystem}.lima-devshell}/bin/lima-devshell";
+        };
+      };
     };
 }
 

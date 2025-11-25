@@ -57,9 +57,9 @@ All path guards and helper scripts depend on this mapping being consistent.
 
 ### Guard System
 Three levels of validation:
-1. **Host-side** (`lima-devshell` command): Verifies you're in a git worktree under `~/.local/state/git/worktrees/`
+1. **Host-side** (`lima-devshell` Rust CLI): Verifies you're in a git worktree under `~/.local/state/git/worktrees/`
 2. **In-VM bootstrap** (flake.nix shellHook): Warns if not in git worktree after path mapping
-3. **Helper script** (bin/enter-project-devshell.sh): Validates worktrees root, git status, and flake.nix existence
+3. **In-VM validation** (embedded in Rust CLI): Validates worktrees root, git status, and flake.nix existence inside Lima VM
 
 ### Key Files
 
@@ -67,13 +67,13 @@ Three levels of validation:
 - Only supports `x86_64-linux` and `aarch64-linux` (Lima VM architectures)
 - Single `default` devShell with minimal packages
 - shellHook sets `NIX_CONFIG` for flakes/nix-command, exports `WORKTREES=/worktrees`
-- References helper script at `/worktrees/io.github/bdelanghe/lima-devshell/bin/enter-project-devshell.sh`
+- Builds Rust CLI (`lima-devshell`) for macOS that handles all validation and Lima instance management
 
-**bin/enter-project-devshell.sh**
-- Bash helper for entering project devshells from bootstrap shell
-- Validates target directory is under `/worktrees` and is a git worktree
-- Warns if no flake.nix found but continues anyway
-- Executes `nix develop` in target directory
+**src/main.rs (Rust CLI)**
+- Rust application that replaces all shell scripts
+- Validates git worktrees, paths, and Lima instances using `git2` crate
+- Generates Lima configuration and manages instance lifecycle
+- Embeds validation script that runs inside Lima VM to verify worktree and launch `nix develop`
 
 ### Repository Structure (XDG Pattern)
 - **Bare repo**: `~/.local/share/git/bare/io.github/bdelanghe/lima-devshell.git/`
@@ -93,16 +93,16 @@ Only add packages that are absolutely necessary to *reach* project devshells. Th
 The bootstrap shell sets:
 - `NIX_CONFIG="experimental-features = nix-command flakes"` - Required for modern Nix
 - `WORKTREES=/worktrees` - Standard worktree root in Lima
-- `LIMA_DEVSHELL_SCRIPT` - Path to helper script
 
 Do not add project-specific environment variables here.
 
-### Helper Script Expectations
-`bin/enter-project-devshell.sh` must:
-- Accept optional directory argument (defaults to pwd)
-- Validate paths are under `/worktrees`
-- Verify git worktree status
-- Use `exec nix develop` as the final command (replaces shell process)
+### Rust CLI Expectations
+The `lima-devshell` Rust CLI:
+- Accepts optional `--directory` argument (defaults to current directory)
+- Validates paths are under `~/.local/state/git/worktrees/` on host
+- Verifies git worktree status using `git2` crate
+- Generates and manages Lima instance configurations
+- Embeds validation script that runs inside Lima VM to verify `/worktrees` path and launch `nix develop`
 
 ## Testing Changes
 

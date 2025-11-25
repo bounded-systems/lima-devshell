@@ -1,10 +1,14 @@
 # lima-devshell
 
-Bootstrap devshell for Lima VM environments. This flake provides just enough tools (nix, git, curl, etc.) to run `nix develop` on project devshells inside the Lima VM.
+Bootstrap devshell for Lima VM environments and Home Manager configuration for macOS. This flake provides:
+- Minimal tooling needed to launch project devshells inside Lima VMs
+- Complete Home Manager configuration for macOS (integrated with Determinate Systems)
 
 ## Purpose
 
-This is a **bootstrap flake**, not a project devshell. Its only job is to provide minimal tooling needed to launch the "real" devshells defined in your project flakes (Percy, dx, etc.).
+This flake serves two purposes:
+1. **Bootstrap devshell**: Provides minimal tooling (nix, git, curl, etc.) to run `nix develop` on project devshells inside the Lima VM
+2. **Home Manager config**: Manages your macOS home environment with packages, shell configuration, and tools
 
 ## What It Provides
 
@@ -60,6 +64,72 @@ If guards fail, the command exits with clear error messages before launching Lim
 The bootstrap shell sets:
 - `NIX_CONFIG="experimental-features = nix-command flakes"` - Enables modern Nix features
 - `WORKTREES=/worktrees` - Common worktree root inside Lima
+
+## Home Manager Configuration (macOS)
+
+This flake includes a complete Home Manager configuration for macOS, designed to work with [Determinate Systems Nix Installer](https://determinate.systems/nix-installer).
+
+### Prerequisites
+
+1. **Install Nix with Determinate Systems installer**:
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf -L https://install.determinate.systems/nix | sh -s -- install
+   ```
+
+2. **Install Home Manager** (if not already installed):
+   ```bash
+   nix run home-manager/master -- init --switch
+   ```
+
+### Activating the Configuration
+
+From this repository directory:
+
+```bash
+# Switch to the Home Manager configuration
+home-manager switch --flake .#bobby@macos
+```
+
+Or using the flake directly:
+
+```bash
+# Build and switch in one command
+nix run home-manager/master -- switch --flake .#bobby@macos
+```
+
+### What's Configured
+
+- **Packages**: nodejs, act, gnused, lima, yarn
+- **Git**: Full git with SSH signing via 1Password
+- **GitHub CLI**: Configured with SSH protocol
+- **direnv**: With nix-direnv support
+- **zsh**: With completion and `lima-devshell` function
+- **devcontainers-cli**: For VS Code devcontainers
+- **Environment**: PATH configured for Determinate Systems setup
+
+### Updating the Configuration
+
+After making changes to `flake.nix`:
+
+```bash
+# Rebuild and switch
+home-manager switch --flake .#bobby@macos
+```
+
+### Using from a Different Location
+
+If you want to use this flake from elsewhere (e.g., as a remote flake):
+
+```bash
+# From any directory
+home-manager switch --flake github:bdelanghe/lima-devshell#bobby@macos
+```
+
+Or if using a local path:
+
+```bash
+home-manager switch --flake /path/to/lima-devshell#bobby@macos
+```
 
 ## Repository Structure
 
