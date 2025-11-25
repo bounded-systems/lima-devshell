@@ -118,10 +118,16 @@
                 if [ "''${#created_stashes[@]}" -gt 0 ]; then
                   echo ""
                   echo "Restoring stashed lock file changes..."
-                  # Pop stashes in reverse order
-                  for ((i="''${#created_stashes[@]}"-1; i>=0; i--)); do
-                    git stash pop >/dev/null 2>&1 || true
+                  # Pop stashes in reverse order (newest first)
+                  local stash_count="''${#created_stashes[@]}"
+                  for ((i=stash_count-1; i>=0; i--)); do
+                    if git stash pop >/dev/null 2>&1; then
+                      echo "  ✓ Restored lock file from stash $((i+1))/$stash_count"
+                    else
+                      echo "  ⚠ Warning: Could not restore stash $((i+1))/$stash_count"
+                    fi
                   done
+                  echo ""
                 fi
               }
               trap restore_changes EXIT
