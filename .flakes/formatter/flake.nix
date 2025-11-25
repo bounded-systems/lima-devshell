@@ -17,7 +17,7 @@
       {
         formatter = pkgs.writeShellApplication {
           name = "format";
-          runtimeInputs = with pkgs; [ nixpkgs-fmt cargo rustfmt ];
+          runtimeInputs = with pkgs; [ nixpkgs-fmt cargo rustfmt findutils ];
           text = ''
             set -euo pipefail
 
@@ -26,7 +26,9 @@
             cd "$project_root"
 
             echo "Formatting Nix files..."
-            nixpkgs-fmt .
+            # Only format root-level and dev/ nix files, skip .flakes and vendor
+            # nixpkgs-fmt can handle multiple files at once
+            find . -maxdepth 2 -name "*.nix" -type f ! -path "./.flakes/*" ! -path "./vendor/*" ! -path "./.git/*" -print0 | xargs -0 -r nixpkgs-fmt
 
             echo "Formatting Rust files..."
             cargo fmt --all
