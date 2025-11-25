@@ -121,7 +121,7 @@ fn create_lima_instance(instance_name: &str, config_path: &Path) -> Result<bool>
     let config_path_str = config_path
         .to_str()
         .context("Lima config path contains invalid UTF-8")?;
-    
+
     let status = Command::new("sh")
         .arg("-c")
         .arg(format!(
@@ -169,8 +169,11 @@ fn start_lima_instance(instance_name: &str) -> Result<()> {
 
 /// Wait for Lima instance to be fully ready (guest agent connected)
 fn wait_for_instance_ready(instance_name: &str, max_wait_seconds: u64) -> Result<()> {
-    println!("lima-devshell: waiting for instance '{}' to be ready...", instance_name);
-    
+    println!(
+        "lima-devshell: waiting for instance '{}' to be ready...",
+        instance_name
+    );
+
     for i in 0..max_wait_seconds {
         // Try to run a simple command to check if the instance is ready
         let status = Command::new("limactl")
@@ -178,20 +181,24 @@ fn wait_for_instance_ready(instance_name: &str, max_wait_seconds: u64) -> Result
             .stdout(Stdio::null())
             .stderr(Stdio::null())
             .status();
-        
+
         if let Ok(exit_status) = status {
             if exit_status.success() {
                 println!("lima-devshell: instance '{}' is ready", instance_name);
                 return Ok(());
             }
         }
-        
+
         if i < max_wait_seconds - 1 {
             thread::sleep(Duration::from_secs(1));
         }
     }
-    
-    anyhow::bail!("instance '{}' did not become ready within {} seconds", instance_name, max_wait_seconds);
+
+    anyhow::bail!(
+        "instance '{}' did not become ready within {} seconds",
+        instance_name,
+        max_wait_seconds
+    );
 }
 
 /// Clean up old "dev" instance that might have invalid YAML
@@ -249,12 +256,12 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &Path) -> Result<
         instance.name
     );
     let was_started = create_lima_instance(&instance.name, &local_yaml_path)?;
-    
+
     // Only start if create didn't start it (we answered "n" to the prompt)
     if !was_started {
         start_lima_instance(&instance.name)?;
     }
-    
+
     // Wait for the instance to be fully ready (guest agent connected)
     wait_for_instance_ready(&instance.name, 60)?;
 
