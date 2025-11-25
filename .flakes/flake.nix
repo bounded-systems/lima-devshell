@@ -57,16 +57,13 @@
     {
       # Lib output maps directly to lib subflake (not system-specific)
       lib = lib-flake.lib;
-    } // forAllSystems (system:
-      {
-        # Apps output maps directly to apps subflake
-        apps = apps-flake.apps.${system};
-        # Checks output maps directly to checks subflake
-        checks = checks-flake.checks.${system};
-        # Formatter output maps directly to formatter subflake
-        formatter = formatter-flake.formatter.${system};
-        # Packages output maps directly to packages subflake
-        packages = packages-flake.packages.${system};
-      }
-    );
+      # Apps output: apps.${system} structure
+      apps = forAllSystems (system: apps-flake.apps.${system});
+      # Checks output: checks.${system} structure
+      checks = forAllSystems (system: checks-flake.checks.${system});
+      # Formatter output: formatter.${system} structure
+      formatter = forAllSystems (system: formatter-flake.formatter.${system});
+      # Packages output: packages.${system} structure
+      packages = forAllSystems (system: packages-flake.packages.${system});
+    };
 }
