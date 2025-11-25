@@ -117,6 +117,9 @@
         "flake-utils": "flake-utils_4",
         "nixpkgs": [
           "nixpkgs"
+        ],
+        "project-root": [
+          "project-root"
         ]
       },
       "locked": {
