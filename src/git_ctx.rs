@@ -14,19 +14,18 @@ pub fn is_git_worktree(dir: &Path) -> Result<bool> {
 /// Resolve the bare repository path from a worktree directory
 /// Uses git2 to discover the repository and navigate to the bare repo
 pub fn resolve_bare_repo_path(target_dir: &Path) -> Result<PathBuf> {
-    let repo = Repository::discover(target_dir)
-        .context("failed to discover Git repository")?;
+    let repo = Repository::discover(target_dir).context("failed to discover Git repository")?;
 
-    let workdir = repo.workdir()
+    let workdir = repo
+        .workdir()
         .context("repository has no work directory (bare repo?)")?;
 
     let git_dir = repo.path();
 
     // Check if .git is a file (worktree case)
     if git_dir.is_file() {
-        let content = fs::read_to_string(git_dir)
-            .context("failed to read .git file")?;
-        
+        let content = fs::read_to_string(git_dir).context("failed to read .git file")?;
+
         if let Some(gitdir) = content.strip_prefix("gitdir: ") {
             let gitdir_path = PathBuf::from(gitdir.trim());
             // Navigate up from worktrees/<name>/ to get bare repo
@@ -64,4 +63,3 @@ pub fn determine_lima_instance(path_segments: &[&str]) -> Result<String> {
         _ => anyhow::bail!("unexpected worktree path structure"),
     }
 }
-

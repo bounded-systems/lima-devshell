@@ -98,8 +98,7 @@ fn write_lima_yaml(instance: &InstanceModel) -> Result<()> {
     let yaml_content = generate_lima_yaml(instance);
     let yaml_path = lima_instance_dir.join("lima.yaml");
 
-    std::fs::write(&yaml_path, yaml_content)
-        .context("failed to write Lima YAML configuration")?;
+    std::fs::write(&yaml_path, yaml_content).context("failed to write Lima YAML configuration")?;
 
     Ok(())
 }
@@ -181,4 +180,3 @@ pub fn enter_devshell(instance: &InstanceModel, ctx: &Context) -> Result<()> {
 
     Ok(())
 }
-
