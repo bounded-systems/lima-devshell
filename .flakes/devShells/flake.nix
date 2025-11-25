@@ -3,12 +3,9 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    # Project root is passed from parent flake via follows
-    # Parent provides the actual path, so we just declare the input
-    project-root.url = "";
   };
 
-  outputs = { self, nixpkgs, project-root }:
+  outputs = { self, nixpkgs }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       # Import nixpkgs for lib access
