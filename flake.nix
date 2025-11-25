@@ -19,7 +19,9 @@
   };
 
   outputs = { self, nixpkgs, flake-utils, flakes, project-root, ... }:
-    # Delegate all outputs to .flakes flake
+    # Re-export only valid outputs from .flakes flake
     # Project root is passed to .flakes via follows (non-flake path input)
-    flakes;
+    {
+      apps = flakes.apps or { };
+    };
 }
