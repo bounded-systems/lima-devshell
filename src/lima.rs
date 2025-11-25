@@ -5,7 +5,8 @@ use std::collections::hash_map::DefaultHasher;
 use std::env;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::io::Write;
 
 // Lima VM configuration constants
 pub const VM_TYPE: &str = "vz";
@@ -113,7 +114,7 @@ fn is_instance_running(instance_name: &str) -> Result<bool> {
 
 /// Create a Lima instance from a YAML file
 fn create_lima_instance(instance_name: &str, config_path: &Path) -> Result<()> {
-    let status = Command::new("limactl")
+    let mut child = Command::new("limactl")
         .args([
             "create",
             "--tty=false",
@@ -123,8 +124,19 @@ fn create_lima_instance(instance_name: &str, config_path: &Path) -> Result<()> {
                 .to_str()
                 .context("Lima config path contains invalid UTF-8")?,
         ])
-        .status()
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
         .context("failed to execute limactl create")?;
+
+    // Send "y" to answer the "Do you want to start the instance now?" prompt
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(b"y\n");
+        let _ = stdin.flush();
+    }
+
+    let status = child.wait().context("failed to wait for limactl create")?;
 
     if !status.success() {
         anyhow::bail!("failed to create Lima instance");
