@@ -16,18 +16,6 @@ pub fn xdg_state_home() -> Result<PathBuf> {
     Ok(PathBuf::from(xdg_state_home))
 }
 
-/// Get XDG_DATA_HOME directory, falling back to ~/.local/share
-pub fn xdg_data_home() -> Result<PathBuf> {
-    let xdg_data_home = match env::var("XDG_DATA_HOME") {
-        Ok(val) => val,
-        Err(_) => {
-            let home = env::var("HOME").context("HOME environment variable not set")?;
-            format!("{}/.local/share", home)
-        }
-    };
-    Ok(PathBuf::from(xdg_data_home))
-}
-
 /// Get the host worktree root directory
 pub fn get_host_worktree_root() -> Result<PathBuf> {
     let xdg_state_home = xdg_state_home()?;

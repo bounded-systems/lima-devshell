@@ -17,9 +17,6 @@ pub struct Args {
 /// Context containing all derived information about the target directory
 pub struct AppContext {
     pub target_dir_host: PathBuf,
-    pub host_worktree_root: PathBuf,
-    pub rel_path: String,
-    pub guest_worktree_root: String,
     pub guest_cwd: String,
     pub path_segments: Vec<String>,
     pub lima_instance: String,
@@ -34,7 +31,6 @@ pub struct InstanceModel {
     pub worktree_mount_guest: String,
     pub bare_repo_mount_host: PathBuf,
     pub bare_repo_mount_guest: String,
-    pub bare_repo_mount_name: String,
     pub repo_name: String,
 }
 
@@ -57,7 +53,6 @@ impl AppContext {
             .context("current directory is not under the host worktree root")?;
 
         // Compute the equivalent path inside Lima
-        let guest_worktree_root = "/worktrees".to_string();
         let guest_cwd = guest_path_for(&rel_path);
 
         // Extract repo name and worktree name from path to determine Lima instance name
@@ -76,9 +71,6 @@ impl AppContext {
 
         Ok(AppContext {
             target_dir_host: target_dir,
-            host_worktree_root,
-            rel_path,
-            guest_worktree_root,
             guest_cwd,
             path_segments,
             lima_instance,
@@ -103,7 +95,6 @@ impl InstanceModel {
             worktree_mount_guest: ctx.guest_cwd.clone(),
             bare_repo_mount_host: ctx.bare_repo_path.clone(),
             bare_repo_mount_guest: format!("/git/bare/{}", ctx.bare_repo_mount_name),
-            bare_repo_mount_name: ctx.bare_repo_mount_name.clone(),
             repo_name,
         })
     }
