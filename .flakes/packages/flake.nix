@@ -39,7 +39,7 @@
         };
 
         # Build cargo artifacts first (dependencies)
-        cargoArtifacts = craneLib.buildCargoArtifacts commonArgs;
+        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
       in
       {
         packages = {
