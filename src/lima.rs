@@ -173,10 +173,27 @@ fn start_lima_instance(instance_name: &str) -> Result<()> {
     Ok(())
 }
 
+/// Clean up old "dev" instance that might have invalid YAML
+fn cleanup_old_dev_instance() -> Result<()> {
+    let lima_home = get_lima_home()?;
+    let dev_instance_dir = lima_home.join("dev");
+
+    if dev_instance_dir.exists() {
+        println!("lima-devshell: cleaning up old 'dev' instance with invalid configuration...");
+        // Ignore errors - the instance might not exist or already be deleted
+        let _ = delete_lima_instance("dev");
+    }
+
+    Ok(())
+}
+
 /// Ensure Lima instance exists and is running
 pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &Path) -> Result<()> {
     let lima_home = get_lima_home()?;
     let lima_instance_dir = lima_home.join(&instance.name);
+
+    // Clean up old "dev" instance that might have invalid YAML
+    cleanup_old_dev_instance()?;
 
     // Write YAML configuration to the worktree directory (not to home)
     let local_yaml_path = worktree_dir.join("lima.yaml");
