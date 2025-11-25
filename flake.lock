@@ -167,6 +167,10 @@
         "nixpkgs": [
           "flakes",
           "nixpkgs"
+        ],
+        "project-root": [
+          "flakes",
+          "project-root"
         ]
       },
       "locked": {
