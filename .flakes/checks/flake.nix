@@ -28,7 +28,7 @@
         projectRoot = toString project-root;
 
         # Initialize crane for clippy check
-        craneLib = crane.lib.${system} pkgs;
+        craneLib = crane.mkLib pkgs;
 
         # Filter source files (excludes vendor, target, etc.)
         src = craneLib.cleanCargoSource (craneLib.path projectRoot);
@@ -40,6 +40,7 @@
           version = "0.1.0";
           buildInputs = with pkgs; [
             libgit2
+            openssl
             pkg-config
           ];
         };
