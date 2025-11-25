@@ -5,7 +5,9 @@ use std::collections::hash_map::DefaultHasher;
 use std::env;
 use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::thread;
+use std::time::Duration;
 
 // Lima VM configuration constants
 pub const VM_TYPE: &str = "vz";
@@ -165,6 +167,33 @@ fn start_lima_instance(instance_name: &str) -> Result<()> {
     Ok(())
 }
 
+/// Wait for Lima instance to be fully ready (guest agent connected)
+fn wait_for_instance_ready(instance_name: &str, max_wait_seconds: u64) -> Result<()> {
+    println!("lima-devshell: waiting for instance '{}' to be ready...", instance_name);
+    
+    for i in 0..max_wait_seconds {
+        // Try to run a simple command to check if the instance is ready
+        let status = Command::new("limactl")
+            .args(["shell", instance_name, "--", "echo", "ready"])
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status();
+        
+        if let Ok(exit_status) = status {
+            if exit_status.success() {
+                println!("lima-devshell: instance '{}' is ready", instance_name);
+                return Ok(());
+            }
+        }
+        
+        if i < max_wait_seconds - 1 {
+            thread::sleep(Duration::from_secs(1));
+        }
+    }
+    
+    anyhow::bail!("instance '{}' did not become ready within {} seconds", instance_name, max_wait_seconds);
+}
+
 /// Clean up old "dev" instance that might have invalid YAML
 fn cleanup_old_dev_instance() -> Result<()> {
     let lima_home = get_lima_home()?;
@@ -225,6 +254,9 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &Path) -> Result<
     if !was_started {
         start_lima_instance(&instance.name)?;
     }
+    
+    // Wait for the instance to be fully ready (guest agent connected)
+    wait_for_instance_ready(&instance.name, 60)?;
 
     Ok(())
 }
