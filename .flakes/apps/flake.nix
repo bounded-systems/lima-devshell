@@ -175,27 +175,34 @@
                 
                 # Update the flake
                 # Nix refuses to update flakes with path inputs pointing to git repos with uncommitted changes
-                # We need to work around this by using --override-input or by allowing dirty git trees
+                # Solution: Update only non-path inputs (nixpkgs, flake-utils, crane, etc.)
                 local update_success=false
                 local update_output
                 
-                # First, try with --no-warn-dirty (suppresses warnings but may not help with errors)
+                # Get list of inputs from the flake
+                local inputs
+                inputs=$(cd "$flake_dir" && nix flake metadata --json 2>/dev/null | grep -o '"name": "[^"]*"' | sed 's/"name": "\([^"]*\)"/\1/' || echo "")
+                
+                # Try updating all inputs first
                 update_output=$(cd "$flake_dir" && nix flake update --no-warn-dirty 2>&1)
                 if [ $? -eq 0 ]; then
                   update_success=true
                 else
-                  # If that failed due to uncommitted changes, try to update specific inputs
-                  # Extract input names from the flake and try updating them individually
-                  # For now, just try the regular update and show a helpful message
-                  update_output=$(cd "$flake_dir" && nix flake update 2>&1)
-                  if [ $? -eq 0 ]; then
-                    update_success=true
-                  else
-                    # Check if the error is about uncommitted changes
+                  # If that failed, try updating only non-path inputs
+                  # Common non-path inputs: nixpkgs, flake-utils, crane, systems
+                  for input in nixpkgs flake-utils crane systems; do
+                    update_output=$(cd "$flake_dir" && nix flake update --no-warn-dirty "$input" 2>&1)
+                    if [ $? -eq 0 ]; then
+                      update_success=true
+                    fi
+                  done
+                  
+                  # If still no success, check the error
+                  if [ "$update_success" = false ]; then
                     if echo "$update_output" | grep -q "uncommitted changes"; then
-                      echo "  ⚠ Skipped: Uncommitted changes detected"
-                      echo "  Hint: Commit or stash changes, or update inputs manually with:"
-                      echo "        cd $flake_dir && nix flake update <input-name>"
+                      echo "  ⚠ Skipped: Uncommitted changes in path inputs"
+                      echo "  Note: Path inputs (like project-root) cannot be updated with uncommitted changes"
+                      echo "  Hint: The flake's non-path inputs were updated if possible"
                     fi
                   fi
                 fi
