@@ -87,6 +87,39 @@
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               echo ""
               
+              # Collect all flakes first
+              declare -a flake_dirs=()
+              declare -a flake_names=()
+              
+              # Add root flake if it exists
+              if [ -f "${projectRoot}/flake.nix" ]; then
+                flake_dirs+=("${projectRoot}")
+                flake_names+=("root")
+              fi
+              
+              # Find all flakes in .flakes/ subdirectories
+              if [ -d "${projectRoot}/.flakes" ]; then
+                while IFS= read -r flake_file; do
+                  flake_dir=$(dirname "$flake_file")
+                  flake_name=".flakes/$(basename "$flake_dir")"
+                  flake_dirs+=("$flake_dir")
+                  flake_names+=("$flake_name")
+                done < <(find "${projectRoot}/.flakes" -mindepth 2 -maxdepth 2 -name "flake.nix" -type f 2>/dev/null || true)
+              fi
+              
+              # List all flakes found
+              if [ ${#flake_dirs[@]} -eq 0 ]; then
+                echo "No flakes found to update."
+                exit 0
+              fi
+              
+              echo "Found ${#flake_dirs[@]} flake(s):"
+              for i in "''${!flake_names[@]}"; do
+                echo "  $((i+1)). ''${flake_names[i]}"
+                echo "     ''${flake_dirs[i]}"
+              done
+              echo ""
+              
               # Track success/failure
               updated=0
               failed=0
@@ -111,25 +144,10 @@
                 echo ""
               }
               
-              # Update root flake
-              if [ -f "${projectRoot}/flake.nix" ]; then
-                update_flake "${projectRoot}" "root"
-              else
-                echo "Warning: No flake.nix found in root directory"
-                echo ""
-              fi
-              
-              # Find and update all flakes in .flakes/ subdirectories
-              if [ -d "${projectRoot}/.flakes" ]; then
-                find "${projectRoot}/.flakes" -mindepth 2 -maxdepth 2 -name "flake.nix" -type f 2>/dev/null | while read -r flake_file; do
-                  flake_dir=$(dirname "$flake_file")
-                  flake_name=".flakes/$(basename "$flake_dir")"
-                  update_flake "$flake_dir" "$flake_name"
-                done || true
-              else
-                echo "Warning: .flakes directory not found"
-                echo ""
-              fi
+              # Update all collected flakes
+              for i in "''${!flake_dirs[@]}"; do
+                update_flake "''${flake_dirs[i]}" "''${flake_names[i]}"
+              done
               
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               echo "  Summary"
