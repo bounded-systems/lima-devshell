@@ -174,15 +174,29 @@
                 fi
                 
                 # Update the flake
-                # Use --no-warn-dirty to allow updates even with uncommitted changes
-                # This is safe for lock file updates
+                # Nix refuses to update flakes with path inputs pointing to git repos with uncommitted changes
+                # We need to work around this by using --override-input or by allowing dirty git trees
                 local update_success=false
-                if (cd "$flake_dir" && nix flake update --no-warn-dirty 2>&1); then
+                local update_output
+                
+                # First, try with --no-warn-dirty (suppresses warnings but may not help with errors)
+                update_output=$(cd "$flake_dir" && nix flake update --no-warn-dirty 2>&1)
+                if [ $? -eq 0 ]; then
                   update_success=true
                 else
-                  # Try without --no-warn-dirty if that flag doesn't exist or failed
-                  if (cd "$flake_dir" && nix flake update 2>&1); then
+                  # If that failed due to uncommitted changes, try to update specific inputs
+                  # Extract input names from the flake and try updating them individually
+                  # For now, just try the regular update and show a helpful message
+                  update_output=$(cd "$flake_dir" && nix flake update 2>&1)
+                  if [ $? -eq 0 ]; then
                     update_success=true
+                  else
+                    # Check if the error is about uncommitted changes
+                    if echo "$update_output" | grep -q "uncommitted changes"; then
+                      echo "  ⚠ Skipped: Uncommitted changes detected"
+                      echo "  Hint: Commit or stash changes, or update inputs manually with:"
+                      echo "        cd $flake_dir && nix flake update <input-name>"
+                    fi
                   fi
                 fi
                 
