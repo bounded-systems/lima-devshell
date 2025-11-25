@@ -192,7 +192,7 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &Path) -> Result<
                 "lima-devshell: starting existing Lima instance '{}'...",
                 instance.name
             );
-            
+
             // If start fails, the instance might have invalid config - delete and recreate
             if start_lima_instance(&instance.name).is_err() {
                 println!(
