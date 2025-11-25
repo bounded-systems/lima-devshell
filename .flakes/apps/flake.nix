@@ -176,30 +176,36 @@
                 # Update the flake
                 # Use --no-warn-dirty to allow updates even with uncommitted changes
                 # This is safe for lock file updates
+                local update_success=false
                 if (cd "$flake_dir" && nix flake update --no-warn-dirty 2>&1); then
+                  update_success=true
+                else
+                  # Try without --no-warn-dirty if that flag doesn't exist or failed
+                  if (cd "$flake_dir" && nix flake update 2>&1); then
+                    update_success=true
+                  fi
+                fi
+                
+                if [ "$update_success" = true ]; then
                   echo "  ✓ Updated successfully"
                   ((updated++))
                 else
-                  local update_output
-                  update_output=$(cd "$flake_dir" && nix flake update 2>&1) || {
-                    echo "  ✗ Update failed"
-                    echo "  Error output: $update_output" | head -3
-                    echo "  Note: This may be due to uncommitted changes or network issues"
-                    ((failed++))
-                    failed_dirs+=("$flake_name")
-                  }
-                  if [ $? -eq 0 ]; then
-                    echo "  ✓ Updated successfully"
-                    ((updated++))
-                  fi
+                  echo "  ✗ Update failed"
+                  echo "  Note: This may be due to uncommitted changes or network issues"
+                  ((failed++))
+                  failed_dirs+=("$flake_name")
                 fi
                 echo ""
               }
               
               # Update all collected flakes
-              while IFS='|' read -r flake_name flake_dir; do
-                update_flake "$flake_dir" "$flake_name"
+              # Disable exit on error for the loop to ensure all flakes are processed
+              set +e
+              while IFS='|' read -r flake_name flake_dir || [ -n "$flake_name" ]; do
+                [ -z "$flake_name" ] && continue
+                update_flake "$flake_dir" "$flake_name" || true
               done < "$temp_file"
+              set -e
               
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               echo "  Summary"
