@@ -89,8 +89,8 @@
               # Ensure find and git are available
               export PATH="${findutils}/bin:$PATH"
               
-              # Track stashes created during updates
-              declare -a created_stashes=()
+              # Track stashes created during updates (use regular array, not local)
+              created_stashes=()
               
               # Function to stash lock file changes after each update
               stash_lock_changes() {
@@ -98,7 +98,7 @@
                   # Check if there are any lock file changes
                   if ! git diff-index --quiet HEAD -- '*.lock' 2>/dev/null || ! git ls-files --others --exclude-standard '*.lock' | grep -q .; then
                     # Stash only lock files
-                    local stash_msg="temp: impure-update-flakes-lock-$(date +%s)"
+                    stash_msg="temp: impure-update-flakes-lock-$(date +%s)"
                     if git stash push -m "$stash_msg" -- '*.lock' >/dev/null 2>&1; then
                       created_stashes+=("$stash_msg")
                     fi
