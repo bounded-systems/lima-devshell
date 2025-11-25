@@ -113,36 +113,29 @@ fn is_instance_running(instance_name: &str) -> Result<bool> {
 }
 
 /// Create a Lima instance from a YAML file
-fn create_lima_instance(instance_name: &str, config_path: &Path) -> Result<()> {
-    let mut child = Command::new("limactl")
-        .args([
-            "create",
-            "--tty=false",
-            "--name",
-            instance_name,
-            config_path
-                .to_str()
-                .context("Lima config path contains invalid UTF-8")?,
-        ])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
+/// Returns true if the instance was started by create, false otherwise
+fn create_lima_instance(instance_name: &str, config_path: &Path) -> Result<bool> {
+    // Use echo to pipe "n" to limactl create to skip starting the instance
+    // We'll start it separately to have better control
+    let config_path_str = config_path
+        .to_str()
+        .context("Lima config path contains invalid UTF-8")?;
+    
+    let status = Command::new("sh")
+        .arg("-c")
+        .arg(format!(
+            "echo 'n' | limactl create --tty=false --name {} {}",
+            instance_name, config_path_str
+        ))
+        .status()
         .context("failed to execute limactl create")?;
-
-    // Send "y" to answer the "Do you want to start the instance now?" prompt
-    if let Some(mut stdin) = child.stdin.take() {
-        let _ = stdin.write_all(b"y\n");
-        let _ = stdin.flush();
-    }
-
-    let status = child.wait().context("failed to wait for limactl create")?;
 
     if !status.success() {
         anyhow::bail!("failed to create Lima instance");
     }
 
-    Ok(())
+    // We answered "n", so instance was not started
+    Ok(false)
 }
 
 /// Delete a Lima instance
@@ -227,8 +220,12 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &Path) -> Result<
         "lima-devshell: creating Lima instance '{}'...",
         instance.name
     );
-    create_lima_instance(&instance.name, &local_yaml_path)?;
-    start_lima_instance(&instance.name)?;
+    let was_started = create_lima_instance(&instance.name, &local_yaml_path)?;
+    
+    // Only start if create didn't start it (we answered "n" to the prompt)
+    if !was_started {
+        start_lima_instance(&instance.name)?;
+    }
 
     Ok(())
 }
