@@ -86,8 +86,33 @@
               PROJECT_ROOT=$(pwd)
               
               # Use system nix (Determinate Systems) from PATH
-              # Ensure find is available
+              # Ensure find and git are available
               export PATH="${findutils}/bin:$PATH"
+              
+              # Check if we're in a git repo and have uncommitted changes
+              local has_uncommitted=false
+              local stash_created=false
+              if git rev-parse --git-dir >/dev/null 2>&1; then
+                if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+                  has_uncommitted=true
+                  echo "Detected uncommitted changes - temporarily stashing to allow flake updates..."
+                  git stash push -m "temp: impure-update-flakes $(date +%s)" >/dev/null 2>&1 && stash_created=true || {
+                    echo "Warning: Could not stash changes. Flake updates may fail."
+                  }
+                fi
+              fi
+              
+              # Restore function to be called on exit
+              restore_changes() {
+                if [ "$stash_created" = true ]; then
+                  echo ""
+                  echo "Restoring uncommitted changes..."
+                  git stash pop >/dev/null 2>&1 || {
+                    echo "Warning: Could not restore stashed changes. Run 'git stash list' to see them."
+                  }
+                fi
+              }
+              trap restore_changes EXIT
               
               echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
               echo "  Flake Update Tool"
@@ -174,39 +199,13 @@
                 fi
                 
                 # Update the flake
-                # Nix refuses to update flakes with path inputs pointing to git repos with uncommitted changes
-                # Solution: Use --override-input to bypass path input checks, or update non-path inputs individually
-                local update_success=false
-                local updated_inputs=0
-                
-                # Try updating all inputs first (works if no path inputs or repo is clean)
+                # If we stashed changes, the repo should be clean now and updates should work
                 if (cd "$flake_dir" && nix flake update --no-warn-dirty >/dev/null 2>&1); then
                   update_success=true
                 else
-                  # If that failed, try to update non-path inputs by overriding the path input
-                  # This allows us to update other inputs even with uncommitted changes
-                  local path_input=""
-                  # Try to detect path inputs (usually project-root)
-                  if (cd "$flake_dir" && nix flake metadata --json 2>/dev/null | grep -q '"project-root"'); then
-                    path_input="project-root"
-                  fi
-                  
-                  # Update non-path inputs individually, overriding path input if needed
-                  for input in nixpkgs flake-utils crane systems; do
-                    local update_cmd="nix flake update --no-warn-dirty $input"
-                    if [ -n "$path_input" ]; then
-                      # Override the path input to bypass git check
-                      update_cmd="nix flake update --no-warn-dirty --override-input $path_input path:$PROJECT_ROOT $input"
-                    fi
-                    if (cd "$flake_dir" && $update_cmd >/dev/null 2>&1); then
-                      ((updated_inputs++))
-                      update_success=true
-                    fi
-                  done
-                  
-                  # If we updated at least one input, show partial success
-                  if [ $updated_inputs -gt 0 ]; then
-                    echo "  ⚠ Partially updated: $updated_inputs input(s) updated (path inputs skipped due to uncommitted changes)"
+                  # If that failed, try without --no-warn-dirty
+                  if (cd "$flake_dir" && nix flake update >/dev/null 2>&1); then
+                    update_success=true
                   fi
                 fi
                 
