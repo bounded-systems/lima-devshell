@@ -47,7 +47,13 @@ impl AppContext {
             anyhow::bail!("error: current directory is not inside a Git work tree");
         }
 
-        // Guard 2: Require that the current directory is under the host worktree root
+        // Guard 2: Require that flake.nix exists in the target directory
+        let flake_path = target_dir.join("flake.nix");
+        if !flake_path.exists() {
+            anyhow::bail!("error: flake.nix not found in {}", target_dir.display());
+        }
+
+        // Guard 3: Require that the current directory is under the host worktree root
         let host_worktree_root = get_host_worktree_root()?;
         let rel_path = get_relative_path(&target_dir, &host_worktree_root)
             .context("current directory is not under the host worktree root")?;

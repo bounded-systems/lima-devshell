@@ -86,6 +86,14 @@ provision:
     )
 }
 
+/// Write Lima YAML configuration to a specific path
+fn write_lima_yaml_to_path(instance: &InstanceModel, yaml_path: &PathBuf) -> Result<()> {
+    let yaml_content = generate_lima_yaml(instance);
+    std::fs::write(yaml_path, yaml_content)
+        .context("failed to write Lima YAML configuration")?;
+    Ok(())
+}
+
 /// Write Lima YAML configuration to instance directory
 fn write_lima_yaml(instance: &InstanceModel) -> Result<()> {
     let home = env::var("HOME").context("HOME environment variable not set")?;
@@ -94,10 +102,8 @@ fn write_lima_yaml(instance: &InstanceModel) -> Result<()> {
     std::fs::create_dir_all(&lima_instance_dir)
         .context("failed to create Lima instance directory")?;
 
-    let yaml_content = generate_lima_yaml(instance);
     let yaml_path = lima_instance_dir.join("lima.yaml");
-
-    std::fs::write(&yaml_path, yaml_content).context("failed to write Lima YAML configuration")?;
+    write_lima_yaml_to_path(instance, &yaml_path)?;
 
     Ok(())
 }
@@ -139,12 +145,14 @@ pub fn ensure_instance(instance: &InstanceModel) -> Result<()> {
     let home = env::var("HOME").context("HOME environment variable not set")?;
     let lima_instance_dir = PathBuf::from(format!("{}/.lima/{}", home, instance.name));
 
+    // Always update the YAML configuration to ensure it's current
+    write_lima_yaml(instance)?;
+
     if !lima_instance_dir.exists() {
         println!(
             "lima-devshell: creating Lima instance '{}'...",
             instance.name
         );
-        write_lima_yaml(instance)?;
 
         let yaml_path = lima_instance_dir.join("lima.yaml");
         start_lima_instance(&instance.name, Some(&yaml_path))?;
