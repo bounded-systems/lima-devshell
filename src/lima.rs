@@ -52,7 +52,6 @@ cpus: {}
 disk: "{}"
 
 ssh:
-  user: "dev"
   localPort: {}
   loadDotSSHPubKeys: true
 
