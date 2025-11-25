@@ -23,5 +23,6 @@
     # Project root is passed to .flakes via follows (non-flake path input)
     {
       apps = flakes.apps or { };
+      checks = flakes.checks or { };
     };
 }

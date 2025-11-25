@@ -16,13 +16,22 @@
     # Share nixpkgs and project-root with apps flake
     apps-flake.inputs.nixpkgs.follows = "nixpkgs";
     apps-flake.inputs.project-root.follows = "project-root";
+    
+    # Checks flake
+    checks-flake.url = "path:./checks";
+    
+    # Share nixpkgs and project-root with checks flake
+    checks-flake.inputs.nixpkgs.follows = "nixpkgs";
+    checks-flake.inputs.project-root.follows = "project-root";
   };
 
-  outputs = { self, nixpkgs, flake-utils, project-root, apps-flake, ... }:
+  outputs = { self, nixpkgs, flake-utils, project-root, apps-flake, checks-flake, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       {
         # Apps output maps directly to apps subflake
         apps = apps-flake.apps.${system};
+        # Checks output maps directly to checks subflake
+        checks = checks-flake.checks.${system};
       }
     );
 }
