@@ -119,7 +119,7 @@ fn create_lima_instance(instance_name: &str, config_path: &Path) -> Result<bool>
     let config_path_str = config_path
         .to_str()
         .context("Lima config path contains invalid UTF-8")?;
-    
+
     // Use --yes to skip the "Do you want to start the instance now?" prompt
     // Answer "n" via echo to skip starting during create (we'll start separately)
     let status = Command::new("sh")
