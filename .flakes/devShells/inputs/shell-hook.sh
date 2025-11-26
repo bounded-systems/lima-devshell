@@ -31,4 +31,3 @@ To test the flake build (from project root):
   nix build
 
 EOF
-
