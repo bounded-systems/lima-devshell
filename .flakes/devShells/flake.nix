@@ -53,29 +53,20 @@
             git
           ];
 
-          # Environment variables
-          env = {
-            # Rust development environment
-            RUST_BACKTRACE = "1";
-            RUST_LOG = "debug";
-
-            # Cargo configuration for proper locking
-            # Cargo will manage Cargo.lock in the project root
-            # No need to set CARGO_HOME - let cargo use default or system location
-          };
-
           # Shell hook (read from inputs/shell-hook.sh - static file only)
-          shellHook = builtins.readFile (inputsDir + "/shell-hook.sh");
+          # Note: Environment variables are sourced from inputs/env.sh within the shell hook
+          shellHook = ''
+            # Set inputsDir for shell hook to source env.sh
+            inputsDir="${inputsDir}"
+            ${builtins.readFile (inputsDir + "/shell-hook.sh")}
+          '';
         in
         {
           default = pkgs.mkShell {
             # Tooling packages
             buildInputs = tooling;
 
-            # Environment variables (separated from tooling)
-            inherit (env) RUST_BACKTRACE RUST_LOG;
-
-            # Shell hook (separated for clarity)
+            # Shell hook (sources env.sh for environment variables)
             inherit shellHook;
           };
         });
