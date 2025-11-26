@@ -42,14 +42,7 @@
 
           # Generate static config file using impure-flakes-prep pattern
           # This reads from environment variables at build time and creates a static JSON file
-          staticConfig = pkgs.writeTextFile {
-            name = "lima-devshell-config.json";
-            destination = "/lima-devshell-config.json";
-            text = builtins.toJSON {
-              bootstrap_flake_path = let env = builtins.getEnv "LIMA_DEVSHELL_BOOTSTRAP_PATH"; in if env != "" then env else "/worktrees/lima-devshell";
-              bootstrap_github_url = let env = builtins.getEnv "LIMA_DEVSHELL_BOOTSTRAP_GITHUB"; in if env != "" then env else "github:owner/lima-devshell";
-            };
-          };
+          staticConfig = import ./generate-config.nix { inherit pkgs project-root; };
 
           # Common args for crane builds
           commonArgs = {
