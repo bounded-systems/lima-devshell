@@ -99,20 +99,25 @@
           wrappedChecks = lib.mapAttrs (name: check: wrapInDir "check-${name}" check) allChecks;
 
           # Create JSON manifest of all packages and checks
-          manifest = pkgs.writeText "manifest.json" (builtins.toJSON {
+          manifestFile = pkgs.writeText "manifest.json" (builtins.toJSON {
             packages = lib.attrNames allPackages;
             checks = lib.attrNames allChecks;
             total_count = (lib.length (lib.attrNames allPackages)) + (lib.length (lib.attrNames allChecks));
           });
 
+          # Wrap manifest file in a directory (symlinkJoin needs directories)
+          manifest = pkgs.runCommand "manifest-wrapped"
+            {
+              inherit manifestFile;
+            } ''
+            mkdir -p $out
+            cp "$manifestFile" "$out/MANIFEST.json"
+          '';
+
           # Create an "all" package that builds everything
           all = pkgs.symlinkJoin {
             name = "all";
             paths = lib.attrValues wrappedPackages ++ lib.attrValues wrappedChecks ++ [ manifest ];
-            # Rename manifest.json to MANIFEST.json for consistency
-            postBuild = ''
-              mv $out/manifest.json $out/MANIFEST.json 2>/dev/null || true
-            '';
           };
         in
         allPackages // {
