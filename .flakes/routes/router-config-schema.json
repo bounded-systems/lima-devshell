@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lima-devshell.io/schemas/router-config-schema.json",
+  "title": "Router Configuration Schema",
+  "description": "JSON Schema for router-config.json files",
+  "type": "object",
+  "properties": {
+    "subflakes": {
+      "type": "object",
+      "description": "Subflake definitions",
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "pattern": "^\./[a-zA-Z0-9_-]+$",
+              "description": "Relative path to subflake directory"
+            },
+            "outputSpace": {
+              "type": "string",
+              "enum": ["apps", "checks", "devShells", "formatter", "lib", "overlays", "packages", "templates"],
+              "description": "Output space this subflake owns"
+            },
+            "requiredInputs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of input names this subflake requires"
+            }
+          },
+          "required": ["path", "outputSpace"]
+        }
+      }
+    },
+    "sharedInputs": {
+      "type": "object",
+      "description": "Input sharing configuration",
+      "patternProperties": {
+        ".*": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "description": "Source input name in router"
+            },
+            "followers": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^[a-zA-Z0-9_-]+-flake\\.inputs\\.[a-zA-Z0-9_-]+$"
+              },
+              "description": "List of follower paths (e.g., 'apps-flake.inputs.nixpkgs')"
+            }
+          },
+          "required": ["source", "followers"]
+        }
+      }
+    }
+  },
+  "required": ["subflakes"]
+}
+

@@ -1,6 +1,6 @@
 # Flake Graph Tools
 
-This directory contains graph-aware tooling for managing flake input graphs with schema validation.
+This document describes graph-aware tooling for managing flake input graphs with schema validation. All related configuration files are stored in `.flakes/routes/`.
 
 ## Overview
 
@@ -10,11 +10,20 @@ The graph tools provide:
 - **Graph-aware refresh** that respects isolation constraints
 - **Graph visualization** in multiple formats (JSON, Mermaid, DOT)
 
-## Schema Files
+## Configuration Files
 
-- **`flake-lock-schema.json`**: JSON Schema for validating `flake.lock` structure
+All configuration, schema, and policy files are stored in `.flakes/routes/`:
+
+### Routing Configuration
+- **`router-config.json`**: Declarative routing configuration defining subflake structure and input sharing
+- **`router-config-schema.json`**: JSON Schema for validating router configuration
+
+### Graph & Policy Files
 - **`graph-policy.json`**: Refresh policy defining which inputs can be updated and how
+- **`flake-lock-schema.json`**: JSON Schema for validating `flake.lock` structure
 - **`graph-policy-schema.json`**: JSON Schema for validating policy files
+
+The router also uses **Determinate Systems flake-schemas** for flake output validation.
 
 ## Tools
 
@@ -60,6 +69,14 @@ nix run .#graph-show mermaid
 # DOT format (Graphviz)
 nix run .#graph-show dot
 ```
+
+## Router Configuration
+
+The `router-config.json` file documents the routing structure used by `.flakes/flake.nix`:
+- **Subflakes**: Definitions of each subflake (path, output space, required inputs)
+- **Shared Inputs**: Which inputs are shared via `follows` and which subflakes use them
+
+This serves as documentation and can be used for validation and future tooling.
 
 ## Graph Policy
 

@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lima-devshell.io/schemas/router-config.json",
+  "title": "Router Configuration",
+  "description": "Configuration for .flakes/flake.nix router: defines input sharing and routing",
+  "subflakes": {
+    "apps-flake": {
+      "path": "./apps",
+      "outputSpace": "apps",
+      "requiredInputs": ["nixpkgs", "project-root"]
+    },
+    "checks-flake": {
+      "path": "./checks",
+      "outputSpace": "checks",
+      "requiredInputs": ["nixpkgs", "project-root", "crane"]
+    },
+    "formatter-flake": {
+      "path": "./formatter",
+      "outputSpace": "formatter",
+      "requiredInputs": ["nixpkgs"]
+    },
+    "packages-flake": {
+      "path": "./packages",
+      "outputSpace": "packages",
+      "requiredInputs": ["nixpkgs", "project-root", "crane"]
+    },
+    "lib-flake": {
+      "path": "./lib",
+      "outputSpace": "lib",
+      "requiredInputs": ["nixpkgs"]
+    },
+    "devShells-flake": {
+      "path": "./devShells",
+      "outputSpace": "devShells",
+      "requiredInputs": ["nixpkgs"]
+    }
+  },
+  "sharedInputs": {
+    "nixpkgs": {
+      "source": "nixpkgs",
+      "followers": [
+        "apps-flake.inputs.nixpkgs",
+        "checks-flake.inputs.nixpkgs",
+        "formatter-flake.inputs.nixpkgs",
+        "packages-flake.inputs.nixpkgs",
+        "lib-flake.inputs.nixpkgs",
+        "devShells-flake.inputs.nixpkgs"
+      ]
+    },
+    "project-root": {
+      "source": "project-root",
+      "followers": [
+        "apps-flake.inputs.project-root",
+        "checks-flake.inputs.project-root",
+        "packages-flake.inputs.project-root"
+      ]
+    },
+    "crane": {
+      "source": "crane",
+      "followers": [
+        "checks-flake.inputs.crane",
+        "packages-flake.inputs.crane"
+      ]
+    }
+  }
+}

@@ -2,17 +2,13 @@
 # It may depend on: nixpkgs, crane, project-root, lib-flake, meta-flake.
 # It must not import from other .flakes/* directories.
 # All cross-space composition happens in .flakes/flake.nix (the router).
+#
+# Inputs are defined in inputs/flake.nix to keep this file focused on outputs.
 {
   description = "Validation checks module";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    crane.url = "github:ipetkov/crane";
-    # Project root path (git repo root) - non-flake path input
-    # Default to parent directory for standalone use, overridden by parent via follows
-    project-root.url = "path:..";
-    project-root.flake = false;
-  };
+  # Import inputs from inputs/flake.nix
+  inputs = import ./inputs/flake.nix;
 
   outputs = { self, nixpkgs, crane, project-root }:
     let
@@ -98,7 +94,7 @@
             echo "Checking flake graph structure..."
             
             FLAKE_LOCK="./flake.lock"
-            SCHEMA_FILE="./.flakes/flake-lock-schema.json"
+            SCHEMA_FILE="./.flakes/routes/flake-lock-schema.json"
             
             if [ ! -f "$FLAKE_LOCK" ]; then
               echo "Error: flake.lock not found"

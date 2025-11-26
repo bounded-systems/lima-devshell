@@ -2,16 +2,13 @@
 # It may depend on: nixpkgs, project-root, lib-flake, meta-flake.
 # It must not import from other .flakes/* directories.
 # All cross-space composition happens in .flakes/flake.nix (the router).
+#
+# Inputs are defined in inputs/flake.nix to keep this file focused on outputs.
 {
   description = "Launchable programs module - deterministic tool wrappers";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    # Project root path (git repo root) - non-flake path input
-    # Default to parent directory for standalone use, overridden by parent via follows
-    project-root.url = "path:..";
-    project-root.flake = false;
-  };
+  # Import inputs from inputs/flake.nix
+  inputs = import ./inputs/flake.nix;
 
   outputs = { self, nixpkgs, project-root, ... }:
     let
@@ -548,8 +545,8 @@
               DRY_RUN=false
               VALIDATE_ONLY=false
 
-              while [[ $# -gt 0 ]]; do
-                case $1 in
+              while [ $# -gt 0 ]; do
+                case "$1" in
                   --group) GROUP="$2"; shift 2 ;;
                   --subtree) SUBTREE="$2"; shift 2 ;;
                   --dry-run) DRY_RUN=true; shift ;;
@@ -559,8 +556,8 @@
               done
 
               FLAKE_LOCK="$PROJECT_ROOT/flake.lock"
-              POLICY_FILE="$PROJECT_ROOT/.flakes/graph-policy.json"
-              SCHEMA_FILE="$PROJECT_ROOT/.flakes/flake-lock-schema.json"
+              POLICY_FILE="$PROJECT_ROOT/.flakes/routes/graph-policy.json"
+              SCHEMA_FILE="$PROJECT_ROOT/.flakes/routes/flake-lock-schema.json"
 
               if [ ! -f "$FLAKE_LOCK" ]; then
                 echo "Error: flake.lock not found"
@@ -594,7 +591,7 @@ except jsonschema.ValidationError as e:
 PYTHON_EOF
               fi
 
-              if [ "$VALIDATE_ONLY" = true ]; then
+              if [ "$VALIDATE_ONLY" = "true" ]; then
                 exit 0
               fi
 
@@ -625,7 +622,7 @@ PYTHON_EOF
                 exit 0
               fi
 
-              if [ "$DRY_RUN" = true ]; then
+              if [ "$DRY_RUN" = "true" ]; then
                 echo "Would update: ''${UPDATE_INPUTS[*]}"
                 exit 0
               fi

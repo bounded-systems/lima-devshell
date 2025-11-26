@@ -1,0 +1,6 @@
+{
+  "inputs": {
+    "description": "Templates flake has no inputs - it only provides template outputs"
+  }
+}
+

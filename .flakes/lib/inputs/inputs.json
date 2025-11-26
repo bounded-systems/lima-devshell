@@ -1,0 +1,11 @@
+{
+  "inputs": {
+    "nixpkgs": {
+      "description": "Nixpkgs package set - provides lib utilities for helper functions",
+      "source": "shared",
+      "required": true,
+      "updatePolicy": "auto"
+    }
+  }
+}
+

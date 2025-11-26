@@ -1,0 +1,11 @@
+{
+  "inputs": {
+    "nixpkgs": {
+      "description": "Nixpkgs package set - provides development tools and packages for devShells",
+      "source": "shared",
+      "required": true,
+      "updatePolicy": "auto"
+    }
+  }
+}
+

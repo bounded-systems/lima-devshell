@@ -3,17 +3,33 @@
 # Each subflake (apps, checks, packages, etc.) is isolated and must not
 # import from other subflakes. This router imports all subflakes and
 # composes their outputs, including cross-space logic like packages + checks.
+#
+# Routing configuration is defined in .flakes/routes/router-config.json
+# This file documents the input sharing structure and can be used for:
+# - Documentation and reference
+# - Validation and consistency checks
+# - Future tooling that generates router code
 {
   description = "Dev tooling flake";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     crane.url = "github:ipetkov/crane";
+    
+    # Determinate Systems flake schemas for validation
+    flake-schemas.url = "https://flakehub.com/f/DeterminateSystems/flake-schemas/*.tar.gz";
+
+    # Core routing flake - provides routing utilities and reads router-config.json
+    routes-core.url = "path:./routes";
 
     # Project root path (git repo root) - non-flake path input
     # Default to parent directory for standalone use, overridden by parent via follows
     project-root.url = "path:..";
     project-root.flake = false;
+    
+    # Share nixpkgs and project-root with routes-core
+    routes-core.inputs.nixpkgs.follows = "nixpkgs";
+    routes-core.inputs.project-root.follows = "project-root";
 
     # Apps flake
     apps-flake.url = "path:./apps";
@@ -57,17 +73,25 @@
     devShells-flake.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, project-root, apps-flake, checks-flake, formatter-flake, packages-flake, lib-flake, devShells-flake, ... }:
+  outputs = { self, nixpkgs, project-root, apps-flake, checks-flake, formatter-flake, packages-flake, lib-flake, devShells-flake, flake-schemas, routes-core, ... }:
     let
       # Use nixpkgs.lib directly instead of importing a specific system's pkgs
       lib = nixpkgs.lib;
+      # Use routing utilities from core routing flake
+      routeLib = routes-core.lib;
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       # Import nixpkgs for system-specific packages
       pkgsFor = system: import nixpkgs { inherit system; };
     in
     {
+      # Flake schemas for validation (Determinate Systems)
+      schemas = flake-schemas.schemas;
+      
       # Lib output maps directly to lib subflake (not system-specific)
       lib = lib-flake.lib;
+      
+      # Expose routing utilities for reference/validation
+      routes = routeLib;
       # Apps output: direct re-export (Variant A - subflakes expose apps.${system} directly)
       apps = apps-flake.apps;
       # Checks output: direct re-export (Variant A)
