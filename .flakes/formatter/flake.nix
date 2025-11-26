@@ -1,9 +1,9 @@
 # This flake owns only the `formatter` output space.
-# It may depend on: nixpkgs, lib-flake, meta-flake.
+# It may depend on: nixpkgs (for formatting tools).
 # It must not import from other .flakes/* directories.
 # All cross-space composition happens in .flakes/flake.nix (the router).
 #
-# Input metadata and documentation is stored in inputs/ directory.
+# Input assets (scripts) are stored in inputs/ directory.
 {
   description = "Project formatter module";
 
@@ -13,11 +13,14 @@
 
   outputs = { self, nixpkgs, ... }:
     let
+      # Standard systems list (matches lib-flake for consistency)
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       # Import nixpkgs for lib access
-      pkgsFor = system: import nixpkgs { inherit system; };
-      lib = (pkgsFor "x86_64-linux").lib;
+      lib = nixpkgs.lib;
+      # Helper to apply a function to all systems
       perSystem = f: lib.genAttrs systems f;
+      # Format script path (relative to this flake)
+      formatScript = ./inputs/format.sh;
     in
     {
       formatter = perSystem (system:
@@ -30,36 +33,8 @@
         pkgs.writeShellApplication {
           name = "format";
           runtimeInputs = with pkgs; [ nixpkgs-fmt cargo rustfmt findutils ];
-          text = ''
-            set -euo pipefail
-
-            # Run from the directory nix fmt is invoked in.
-            project_root="''${PROJECT_ROOT:-''$PWD}"
-            cd "$project_root"
-
-            echo "Formatting Nix files..."
-            # Format all nix files including .flakes directory
-            # nixpkgs-fmt can handle multiple files at once
-            find . -name "*.nix" -type f -print0 | xargs -0 -r nixpkgs-fmt
-
-            echo "Formatting Rust files..."
-            if [ -f "Cargo.toml" ]; then
-              # Count Rust files
-              rust_file_count=$(find . -name "*.rs" -type f | wc -l | tr -d ' ')
-              if [ "$rust_file_count" -gt 0 ]; then
-                echo "Found $rust_file_count Rust file(s)"
-                cargo fmt --all || {
-                  echo "Warning: cargo fmt failed or made no changes" >&2
-                  exit 0
-                }
-                echo "Rust formatting complete"
-              else
-                echo "No Rust files found, skipping Rust formatting"
-              fi
-            else
-              echo "No Cargo.toml found, skipping Rust formatting"
-            fi
-          '';
+          # Read script from inputs directory
+          text = builtins.readFile formatScript;
         });
     };
 }
