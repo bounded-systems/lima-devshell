@@ -80,10 +80,10 @@
               echo "Built all packages and checks:" > $out/MANIFEST.txt
               echo "" >> $out/MANIFEST.txt
               echo "Packages:" >> $out/MANIFEST.txt
-              ${lib.concatMapStringsSep "\n" (pkg: "echo '  - ${pkg.name}' >> $out/MANIFEST.txt") (lib.attrValues allPackages)}
+              ${lib.concatMapStringsSep "\n" (name: "echo '  - ${name}' >> $out/MANIFEST.txt") (lib.attrNames allPackages)}
               echo "" >> $out/MANIFEST.txt
               echo "Checks:" >> $out/MANIFEST.txt
-              ${lib.concatMapStringsSep "\n" (check: "echo '  - ${check.name}' >> $out/MANIFEST.txt") (lib.attrValues allChecks)}
+              ${lib.concatMapStringsSep "\n" (name: "echo '  - ${name}' >> $out/MANIFEST.txt") (lib.attrNames allChecks)}
             '';
           };
         in
