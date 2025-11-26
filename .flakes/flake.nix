@@ -15,6 +15,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     crane.url = "github:ipetkov/crane";
+    flake-utils.url = "github:numtide/flake-utils";
     
     # Determinate Systems flake schemas for validation
     flake-schemas.url = "https://flakehub.com/f/DeterminateSystems/flake-schemas/*.tar.gz";
@@ -60,8 +61,12 @@
     packages-flake.inputs.project-root.follows = "project-root";
     packages-flake.inputs.crane.follows = "crane";
 
-    # Lib flake (no inputs needed - pure helper library)
+    # Lib flake - pure helper library
     lib-flake.url = "path:./lib";
+    
+    # Share nixpkgs and flake-utils with lib flake
+    lib-flake.inputs.nixpkgs.follows = "nixpkgs";
+    lib-flake.inputs.flake-utils.follows = "flake-utils";
 
     # DevShells flake
     devShells-flake.url = "path:./devShells";
