@@ -191,7 +191,11 @@ struct LimaConfig {
     rosetta: Option<Rosetta>,
     // Explicitly set port forwarding rules (empty for Nix devshells - all access via limactl shell)
     // This makes it clear we're intentionally not forwarding any ports
-    #[serde(rename = "portForwards", default, skip_serializing_if = "Vec::is_empty")]
+    #[serde(
+        rename = "portForwards",
+        default,
+        skip_serializing_if = "Vec::is_empty"
+    )]
     port_forwards: Vec<PortForward>, // default: []
     #[serde(rename = "mountType", skip_serializing_if = "Option::is_none")]
     mount_type: Option<String>, // enum: "reverse-sshfs" | "9p" | "virtiofs" | "default" | null
