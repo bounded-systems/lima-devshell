@@ -45,36 +45,41 @@
       # Usage: addPackages { myTool = ...; anotherTool = ...; }
       addPackages = packages: final: prev: packages;
     in
+    let
+      # Rust toolchain overlay - ensures consistent Rust versions
+      # Uncomment and customize as needed
+      rustOverlay = final: prev: {
+        # Example: Pin to specific Rust version
+        # rustc = prev.rustc.overrideAttrs (old: {
+        #   version = "1.75.0";
+        # });
+        # cargo = prev.cargo.overrideAttrs (old: {
+        #   version = "1.75.0";
+        # });
+      };
+    in
     {
       overlays = {
         # Default overlay - combines all useful overlays
         # Extend this by adding more overlays to the combineOverlays list
         default = combineOverlays [
           # Add more overlays here as needed
-          # self.overlays.rust
-          # self.overlays.custom
+          # rustOverlay
+          # customOverlay
         ];
 
-        # Rust toolchain overlay - ensures consistent Rust versions
-        # Uncomment and customize as needed
-        rust = final: prev: {
-          # Example: Pin to specific Rust version
-          # rustc = prev.rustc.overrideAttrs (old: {
-          #   version = "1.75.0";
-          # });
-          # cargo = prev.cargo.overrideAttrs (old: {
-          #   version = "1.75.0";
-          # });
-        };
-
-        # Utility overlays - helper functions for common patterns
-        # These are re-exported in lib for convenience
-        inherit combineOverlays addPackage overridePackage replacePackage addPackages;
+        # Rust toolchain overlay - re-exported for convenience
+        rust = rustOverlay;
       };
 
       # Re-export overlay utilities in lib for convenience
+      # These are pure functions, not overlays themselves
       lib = {
         inherit combineOverlays addPackage overridePackage replacePackage addPackages;
+        
+        # Example usage:
+        # combineOverlays = self.overlays.lib.combineOverlays;
+        # myOverlay = self.overlays.lib.addPackage "myTool" (prev.callPackage ./path { });
       };
     };
 }
