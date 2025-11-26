@@ -35,6 +35,8 @@
           };
           # Project root from input
           projectRoot = toString project-root;
+          # Inputs directory path
+          inputsDir = toString inputs;
         in
         {
           # Check Nix code formatting
@@ -43,7 +45,7 @@
               nativeBuildInputs = with pkgs; [ nixpkgs-fmt findutils ];
             } ''
             export PROJECT_ROOT="${projectRoot}"
-            bash ${inputs}/nix-fmt-check.sh
+            bash ${inputsDir}/nix-fmt-check.sh
             touch $out
           '';
 
@@ -52,7 +54,7 @@
             {
             } ''
             export PROJECT_ROOT="${projectRoot}"
-            bash ${inputs}/rust-fmt-check.sh
+            bash ${inputsDir}/rust-fmt-check.sh
             touch $out
           '';
 
@@ -61,7 +63,7 @@
             {
             } ''
             export PROJECT_ROOT="${projectRoot}"
-            bash ${inputs}/clippy-check.sh
+            bash ${inputsDir}/clippy-check.sh
             touch $out
           '';
 
@@ -70,7 +72,7 @@
             {
             } ''
             export PROJECT_ROOT="${projectRoot}"
-            bash ${inputs}/rust-tests.sh
+            bash ${inputsDir}/rust-tests.sh
             touch $out
           '';
 
@@ -81,7 +83,7 @@
               nativeBuildInputs = with pkgs; [ jq python3 ];
             } ''
             export PROJECT_ROOT="${projectRoot}"
-            bash ${inputs}/graph-structure-check.sh
+            bash ${inputsDir}/graph-structure-check.sh
             touch $out
           '';
 
@@ -92,7 +94,7 @@
               nativeBuildInputs = with pkgs; [ findutils gnugrep ];
             } ''
             export PROJECT_ROOT="${projectRoot}"
-            bash ${inputs}/apps-inputs-usage-check.sh
+            bash ${inputsDir}/apps-inputs-usage-check.sh
             touch $out
           '';
 
@@ -104,7 +106,7 @@
               nativeBuildInputs = with pkgs; [ findutils gnugrep ];
             } ''
             export PROJECT_ROOT="${projectRoot}"
-            bash ${inputs}/no-cross-dir-deps-check.sh
+            bash ${inputsDir}/no-cross-dir-deps-check.sh
             touch $out
           '';
         });
