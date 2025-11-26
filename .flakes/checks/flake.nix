@@ -8,9 +8,14 @@
     # Default to parent directory for standalone use, overridden by parent via follows
     project-root.url = "path:..";
     project-root.flake = false;
+    # Packages flake to reference test package
+    packages.url = "path:../packages";
+    packages.inputs.nixpkgs.follows = "nixpkgs";
+    packages.inputs.crane.follows = "crane";
+    packages.inputs.project-root.follows = "project-root";
   };
 
-  outputs = { self, nixpkgs, crane, project-root }:
+  outputs = { self, nixpkgs, crane, project-root, packages }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       # Import nixpkgs for lib access
@@ -79,9 +84,8 @@
           });
 
           # Run Rust unit tests
-          rust-tests = craneLib.cargoTest (commonArgs // {
-            inherit cargoArtifacts;
-          });
+          # Uses the tests package from .flakes/packages for consistency
+          rust-tests = packages.packages.${system}.tests;
         };
       }
     );

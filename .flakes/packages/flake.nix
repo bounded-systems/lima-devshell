@@ -62,6 +62,13 @@
             cargoClippyExtraArgs = "--all-targets -- -D warnings";
           });
 
+          # Build tests for offline usage
+          # This runs cargo test on the codebase and produces a derivation
+          # that can be built and cached for offline use
+          tests = craneLib.cargoTest (commonArgs // {
+            inherit cargoArtifacts;
+          });
+
           # Generate lima.yaml template file
           # This is a template YAML file that can be used as a reference
           # The actual YAML is generated dynamically by lima-devshell at runtime
