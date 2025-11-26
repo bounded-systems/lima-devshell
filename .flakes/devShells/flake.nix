@@ -15,7 +15,7 @@
     inputs.flake = false;
   };
 
-  outputs = { self, nixpkgs, lib-flake, inputs }:
+  outputs = { self, nixpkgs, lib-flake }:
     let
       # Use helpers from lib-flake (shared via router)
       systems = lib-flake.lib.systems;
