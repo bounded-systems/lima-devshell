@@ -1,5 +1,5 @@
 # This flake owns only the `lib` output space.
-# It may depend on: nixpkgs (for lib utilities).
+# It may depend on: nixpkgs (for lib utilities) if needed in the future.
 # It must not import from other .flakes/* directories.
 # This is a pure helper library with no project-space knowledge.
 #
@@ -7,11 +7,7 @@
 {
   description = "Pure helper functions and utilities";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-  };
-
-  outputs = { self, nixpkgs, ... }:
+  outputs = { self }:
     {
       lib = {
         # Example stub function - replace with actual helpers as needed

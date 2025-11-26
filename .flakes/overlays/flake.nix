@@ -1,17 +1,16 @@
 # This flake owns only the `overlays` output space.
-# It may depend on: nixpkgs, lib-flake, meta-flake.
+# It may depend on: nixpkgs, lib-flake, meta-flake if needed in the future.
 # It must not import from other .flakes/* directories.
 # All cross-space composition happens in .flakes/flake.nix (the router).
+#
+# Note: Overlays are functions that receive `final` and `prev` from the nixpkgs
+# that uses them, so they don't need nixpkgs as an input.
 #
 # Input metadata and documentation is stored in inputs/ directory.
 {
   description = "Nixpkgs overlays";
 
-  inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-  };
-
-  outputs = { self, nixpkgs }:
+  outputs = { self }:
     {
       overlays = {
         # Default overlay - can be extended with custom package overrides

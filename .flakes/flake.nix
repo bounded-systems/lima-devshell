@@ -60,11 +60,8 @@
     packages-flake.inputs.project-root.follows = "project-root";
     packages-flake.inputs.crane.follows = "crane";
 
-    # Lib flake
+    # Lib flake (no inputs needed - pure helper library)
     lib-flake.url = "path:./lib";
-
-    # Share nixpkgs with lib flake
-    lib-flake.inputs.nixpkgs.follows = "nixpkgs";
 
     # DevShells flake
     devShells-flake.url = "path:./devShells";
