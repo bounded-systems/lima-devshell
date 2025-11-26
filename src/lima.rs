@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::env;
 use std::path::{Path, PathBuf};
+use std::io::Write;
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
@@ -149,17 +150,23 @@ fn create_lima_instance(instance_name: &str, config_path: &Path) -> Result<bool>
         .to_str()
         .context("Lima config path contains invalid UTF-8")?;
 
-    // Use --yes (--tty=false) to disable TTY and pipe "n" to skip starting during create
-    // We'll start separately after creation
-    let status = Command::new("sh")
-        .arg("-c")
-        .arg(format!(
-            "printf 'n\\n' | limactl create --yes --name {} {}",
-            instance_name, config_path_str
-        ))
-        .stdin(Stdio::null())
-        .status()
-        .context("failed to execute limactl create")?;
+    // Use --yes (--tty=false) to disable TTY allocation
+    // Spawn the command with piped stdin so we can write "n" to answer the prompt
+    let mut child = Command::new("limactl")
+        .args(["create", "--yes", "--name", instance_name, config_path_str])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .context("failed to spawn limactl create")?;
+
+    // Write "n\n" to stdin to answer "Do you want to start the instance now?" prompt
+    if let Some(mut stdin) = child.stdin.take() {
+        let _ = stdin.write_all(b"n\n");
+        let _ = stdin.flush();
+    }
+
+    let status = child.wait().context("failed to wait for limactl create")?;
 
     if !status.success() {
         anyhow::bail!("failed to create Lima instance");
