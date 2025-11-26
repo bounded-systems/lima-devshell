@@ -24,7 +24,7 @@ nix flake check
 nix develop ~/lima-devshell
 
 # Option 2: Use GitHub URL (requires network)
-nix develop github:bdelanghe/lima-devshell
+nix develop github:owner/lima-devshell
 
 # Then navigate to actual project and run its devshell
 cd /worktrees/io.github/pushd/percy/COMMERCE-4873
@@ -76,8 +76,8 @@ Three levels of validation:
 - Embeds validation script that runs inside Lima VM to verify worktree and launch `nix develop`
 
 ### Repository Structure (XDG Pattern)
-- **Bare repo**: `~/.local/share/git/bare/io.github/bdelanghe/lima-devshell.git/`
-- **Worktree**: `~/.local/state/git/worktrees/io.github/bdelanghe/lima-devshell/`
+- **Bare repo**: `~/.local/share/git/bare/io.github/owner/lima-devshell.git/`
+- **Worktree**: `~/.local/state/git/worktrees/io.github/owner/lima-devshell/`
 
 This follows the same pattern used for other repos under `~/.local/state/git/worktrees/`.
 

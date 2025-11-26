@@ -278,7 +278,7 @@ Path mapping utilities:
 
 Guest script generation:
 
-- **`BOOTSTRAP_FLAKE_PATH`**: Path to bootstrap flake in guest (`/worktrees/io.github/bdelanghe/lima-devshell`)
+- **`BOOTSTRAP_FLAKE_PATH`**: Path to bootstrap flake in guest (default: `/worktrees/lima-devshell`, configurable via `LIMA_DEVSHELL_BOOTSTRAP_PATH`)
 - **`build_guest_script()`**: Builds the bash script that runs inside the Lima VM
 
 **Guest script responsibilities:**

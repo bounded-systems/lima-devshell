@@ -23,6 +23,9 @@ vendor/
 # Lima devshell instance name file
 .lima-devshell
 
+# Generated Lima configuration (created dynamically per worktree)
+lima.yaml
+
 # direnv cache files
 .direnv/
 

@@ -1,0 +1,5 @@
+{
+  "bootstrap_flake_path": "/worktrees/lima-devshell",
+  "bootstrap_github_url": "github:owner/lima-devshell"
+}
+

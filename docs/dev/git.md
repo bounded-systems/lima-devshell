@@ -27,7 +27,7 @@ This document describes how `lima-devshell` integrates with Git worktrees and ba
 ```
 ~/.local/state/git/worktrees/
 └── io.github/
-    └── bdelanghe/
+    └── owner/
         └── lima-devshell/
             └── main/
 ```
@@ -56,7 +56,7 @@ Bare repositories are stored separately:
 ```
 ~/.local/share/git/bare/
 └── io.github/
-    └── bdelanghe/
+    └── owner/
         └── lima-devshell.git/
 ```
 
@@ -168,9 +168,9 @@ pub fn determine_lima_instance(path_segments: &[&str]) -> Result<String> {
 
 | Worktree Path | Path Segments | Instance Name |
 |---------------|---------------|---------------|
-| `io.github/bdelanghe/lima-devshell/main` | `["io.github", "bdelanghe", "lima-devshell", "main"]` | `bdelanghe-lima-devshell-main` |
-| `io.github/bdelanghe/lima-devshell` | `["io.github", "bdelanghe", "lima-devshell"]` | `bdelanghe-lima-devshell` |
-| `io.github/bdelanghe` | `["io.github", "bdelanghe"]` | `bdelanghe` |
+| `io.github/owner/lima-devshell/main` | `["io.github", "owner", "lima-devshell", "main"]` | `owner-lima-devshell-main` |
+| `io.github/owner/lima-devshell` | `["io.github", "owner", "lima-devshell"]` | `owner-lima-devshell` |
+| `io.github/owner` | `["io.github", "owner"]` | `owner` |
 
 ## Git Integration
 

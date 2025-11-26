@@ -30,7 +30,7 @@ After entering the Lima VM, you can use this flake to bootstrap into project dev
 nix develop ~/lima-devshell
 
 # Option 2: Use flake URL (if you have network access)
-nix develop github:bdelanghe/lima-devshell
+nix develop github:owner/lima-devshell
 
 # Then navigate to your project and run its devshell
 cd /worktrees/io.github/pushd/percy/COMMERCE-4873
@@ -113,14 +113,14 @@ From this repository directory:
 
 ```bash
 # Switch to the Home Manager configuration
-home-manager switch --flake .#bobby@macos
+home-manager switch --flake .#username@hostname
 ```
 
 Or using the flake directly:
 
 ```bash
 # Build and switch in one command
-nix run home-manager/master -- switch --flake .#bobby@macos
+nix run home-manager/master -- switch --flake .#username@hostname
 ```
 
 ### What's Configured
@@ -139,7 +139,7 @@ After making changes to `flake.nix`:
 
 ```bash
 # Rebuild and switch
-home-manager switch --flake .#bobby@macos
+home-manager switch --flake .#username@hostname
 ```
 
 ### Using from a Different Location
@@ -148,13 +148,13 @@ If you want to use this flake from elsewhere (e.g., as a remote flake):
 
 ```bash
 # From any directory
-home-manager switch --flake github:bdelanghe/lima-devshell#bobby@macos
+home-manager switch --flake github:owner/lima-devshell#username@hostname
 ```
 
 Or if using a local path:
 
 ```bash
-home-manager switch --flake /path/to/lima-devshell#bobby@macos
+home-manager switch --flake /path/to/lima-devshell#username@hostname
 ```
 
 ## Lima Templates
@@ -529,8 +529,8 @@ For a complete list of Lima-related projects, see the [lima-vm GitHub organizati
 
 ## Repository Structure
 
-- **Bare repo**: `~/.local/share/git/bare/io.github/bdelanghe/lima-devshell.git/`
-- **Worktree**: `~/.local/state/git/worktrees/io.github/bdelanghe/lima-devshell/`
+- **Bare repo**: `~/.local/share/git/bare/io.github/owner/lima-devshell.git/`
+- **Worktree**: `~/.local/state/git/worktrees/io.github/owner/lima-devshell/`
 
 Follows the same XDG-based git worktree pattern as other repos.
 

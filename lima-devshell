@@ -152,7 +152,10 @@ fi
 # Enter Lima, cd to the mapped path, and start Nix devshell for the project
 # Note: Lima initialization may show harmless errors about macOS paths - these can be safely ignored
 # Bootstrap flake path inside Lima (mounted from host worktree)
-BOOTSTRAP_FLAKE_PATH="/worktrees/io.github/bdelanghe/lima-devshell"
+# Can be overridden via LIMA_DEVSHELL_BOOTSTRAP_PATH environment variable
+BOOTSTRAP_FLAKE_PATH="${LIMA_DEVSHELL_BOOTSTRAP_PATH:-/worktrees/lima-devshell}"
+# Bootstrap GitHub URL fallback (can be overridden via LIMA_DEVSHELL_BOOTSTRAP_GITHUB)
+BOOTSTRAP_GITHUB="${LIMA_DEVSHELL_BOOTSTRAP_GITHUB:-github:owner/lima-devshell}"
 
 limactl shell "$LIMA_INSTANCE" -- bash -lc "
   set -euo pipefail
@@ -166,7 +169,7 @@ limactl shell "$LIMA_INSTANCE" -- bash -lc "
     # Fallback: try GitHub URL or direct nix develop
     echo \"[lima-devshell] warning: bootstrap flake not found at $BOOTSTRAP_FLAKE_PATH\" >&2
     echo \"[lima-devshell] trying GitHub URL...\" >&2
-    nix develop github:bdelanghe/lima-devshell --command bash -lc 'nix develop' || {
+    nix develop $BOOTSTRAP_GITHUB --command bash -lc 'nix develop' || {
       echo \"[lima-devshell] falling back to direct nix develop\" >&2
       nix develop
     }

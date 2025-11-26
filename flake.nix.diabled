@@ -64,7 +64,7 @@
             export WORKTREES=/worktrees
 
             # Bootstrap flake path (validation logic is now in the Rust CLI)
-            BOOTSTRAP_DIR="/worktrees/io.github/bdelanghe/lima-devshell"
+            BOOTSTRAP_DIR="${LIMA_DEVSHELL_BOOTSTRAP_PATH:-/worktrees/lima-devshell}"
 
             # Optional quality-of-life: show where we are
             echo "[lima-devshell] WORKTREES=$WORKTREES"
@@ -89,14 +89,14 @@
 
       # Home Manager configuration for macOS
       homeConfigurations = {
-        "bobby@macos" = home-manager.lib.homeManagerConfiguration {
+        "username@hostname" = home-manager.lib.homeManagerConfiguration {
           pkgs = darwinPkgs;
           modules = [
             ({ config, pkgs, ... }: {
               # Home Manager needs a bit of information about you and the paths it should
               # manage.
-              home.username = "bobby";
-              home.homeDirectory = "/Users/bobby";
+              home.username = "username";
+              home.homeDirectory = "/Users/username";
 
               # This value determines the Home Manager release that your configuration is
               # compatible with. This helps avoid breakage when a new Home Manager release
@@ -132,7 +132,7 @@
               #
               # or
               #
-              #  /etc/profiles/per-user/bobby/etc/profile.d/hm-session-vars.sh
+              #  /etc/profiles/per-user/username/etc/profile.d/hm-session-vars.sh
               #
               home.sessionVariables = {
                 # Ensure Nix profiles are on PATH (Determinate Systems setup)
@@ -154,8 +154,8 @@
                 };
                 
                 settings = {
-                  user.name = "Robert DeLanghe";
-                  user.email = "1240090+bdelanghe@users.noreply.github.com";
+                  user.name = "Your Name";
+                  user.email = "your-email@example.com";
                   gpg.format = "ssh";
                   gpg.ssh.program = "/Applications/1Password.app/Contents/MacOS/op-ssh-sign";
                 };
