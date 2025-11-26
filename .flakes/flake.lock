@@ -27,9 +27,6 @@
         "inputs": "inputs",
         "nixpkgs": [
           "nixpkgs"
-        ],
-        "project-root": [
-          "project-root"
         ]
       },
       "locked": {
