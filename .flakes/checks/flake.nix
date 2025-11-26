@@ -33,17 +33,29 @@
           };
           # Inputs directory path
           inputsDir = toString inputs;
+          # Get checks flake source (only .nix files and inputs/)
+          checksSrc = lib.cleanSourceWith {
+            src = builtins.path {
+              path = ./.;
+              name = "checks-flake";
+            };
+            filter = path: type:
+              let
+                baseName = baseNameOf path;
+              in
+                baseName == "flake.nix" ||
+                baseName == "inputs" ||
+                lib.hasSuffix ".nix" baseName;
+          };
         in
         {
           # Check Nix code formatting in checks flake only
           nix-fmt-check = pkgs.runCommand "nix-fmt-check"
             {
               nativeBuildInputs = with pkgs; [ nixpkgs-fmt findutils ];
-              # Include the checks flake source
-              checksSrc = self;
+              checksSrc = checksSrc;
             } ''
-            # Copy checks flake to build directory
-            cp -r ${self} ./checks-flake
+            cp -r ${checksSrc} ./checks-flake
             chmod -R +w ./checks-flake
             cd checks-flake
             bash ${inputsDir}/nix-fmt-check.sh
@@ -54,11 +66,9 @@
           shell-scripts-check = pkgs.runCommand "shell-scripts-check"
             {
               nativeBuildInputs = with pkgs; [ findutils gnugrep ];
-              # Include the checks flake source
-              checksSrc = self;
+              checksSrc = checksSrc;
             } ''
-            # Copy checks flake to build directory
-            cp -r ${self} ./checks-flake
+            cp -r ${checksSrc} ./checks-flake
             chmod -R +w ./checks-flake
             cd checks-flake
             bash ${inputsDir}/shell-scripts-check.sh
@@ -70,11 +80,9 @@
           no-cross-dir-deps = pkgs.runCommand "no-cross-dir-deps"
             {
               nativeBuildInputs = with pkgs; [ findutils gnugrep ];
-              # Include the checks flake source
-              checksSrc = self;
+              checksSrc = checksSrc;
             } ''
-            # Copy checks flake to build directory
-            cp -r ${self} ./checks-flake
+            cp -r ${checksSrc} ./checks-flake
             chmod -R +w ./checks-flake
             cd checks-flake
             bash ${inputsDir}/no-cross-dir-deps-check.sh

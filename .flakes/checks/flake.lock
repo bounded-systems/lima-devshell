@@ -43,24 +43,11 @@
         "type": "github"
       }
     },
-    "project-root": {
-      "flake": false,
-      "locked": {
-        "path": "../..",
-        "type": "path"
-      },
-      "original": {
-        "path": "../..",
-        "type": "path"
-      },
-      "parent": []
-    },
     "root": {
       "inputs": {
         "crane": "crane",
         "inputs": "inputs",
-        "nixpkgs": "nixpkgs",
-        "project-root": "project-root"
+        "nixpkgs": "nixpkgs"
       }
     }
   },
