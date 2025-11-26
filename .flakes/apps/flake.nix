@@ -62,14 +62,20 @@
           
           # Helper to create app from shell script with automatic tool hydration
           # Automatically substitutes all tools and extra variables into the script
-          mkAppFromScript = name: scriptPath: description: {
+          # Reads script content and replaces ${VAR} patterns with actual values
+          mkAppFromScript = name: scriptPath: description: let
+            allVars = toolSubstitutions // extraSubstitutions;
+            # Read script and replace all ${VAR} patterns
+            scriptContent = builtins.readFile scriptPath;
+            # Replace each variable: ${VAR} -> value
+            replacedContent = lib.foldl' (content: varName:
+              let varValue = allVars.${varName}; in
+              lib.replaceStrings ["${" + varName + "}"] [varValue] content
+            ) scriptContent (lib.attrNames allVars);
+          in {
             type = "app";
             meta = { inherit description; };
-            program = toString (pkgs.replaceVars {
-              name = "${name}-script";
-              src = scriptPath;
-              vars = toolSubstitutions // extraSubstitutions;
-            });
+            program = toString (pkgs.writeShellScript "${name}-script" replacedContent);
           };
           
           # Define all apps with their script filenames (not full paths)
