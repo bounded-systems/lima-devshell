@@ -11,17 +11,17 @@
       # Import nixpkgs for lib access
       pkgsFor = system: import nixpkgs { inherit system; };
       lib = (pkgsFor "x86_64-linux").lib;
-      forAllSystems = f: lib.genAttrs systems f;
+      perSystem = f: lib.genAttrs systems f;
     in
-    forAllSystems (system:
-      let
-        pkgs = import nixpkgs {
-          inherit system;
-          config.allowUnfree = true;
-        };
-      in
-      {
-        formatter = pkgs.writeShellApplication {
+    {
+      formatter = perSystem (system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+        in
+        pkgs.writeShellApplication {
           name = "format";
           runtimeInputs = with pkgs; [ nixpkgs-fmt cargo rustfmt findutils ];
           text = ''
@@ -54,8 +54,7 @@
               echo "No Cargo.toml found, skipping Rust formatting"
             fi
           '';
-        };
-      }
-    );
+        });
+    };
 }
 
