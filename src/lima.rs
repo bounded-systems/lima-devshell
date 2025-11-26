@@ -150,29 +150,38 @@ fn create_lima_instance(instance_name: &str, config_path: &Path) -> Result<bool>
         .to_str()
         .context("Lima config path contains invalid UTF-8")?;
 
-    // Use --yes (--tty=false) to disable TTY allocation
-    // Spawn the command with piped stdin so we can write "n" to answer the prompt
-    let mut child = Command::new("limactl")
-        .args(["create", "--yes", "--name", instance_name, config_path_str])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .context("failed to spawn limactl create")?;
+    // Always use expect to handle prompts reliably
+    // Even with --yes, limactl may still prompt when run from Rust due to TTY detection
+    // expect ensures we can answer "n" to skip starting the instance during create
+    let expect_script = format!(
+        r#"#!/usr/bin/expect -f
+set timeout 300
+spawn limactl create --yes --name {} {}
+expect {{
+    "Do you want to start the instance now?" {{
+        send "n\r"
+        exp_continue
+    }}
+    eof
+}}
+wait
+"#,
+        instance_name, config_path_str
+    );
 
-    // Write "n\n" to stdin to answer "Do you want to start the instance now?" prompt
-    if let Some(mut stdin) = child.stdin.take() {
-        let _ = stdin.write_all(b"n\n");
-        let _ = stdin.flush();
-    }
-
-    let status = child.wait().context("failed to wait for limactl create")?;
+    let status = Command::new("expect")
+        .arg("-c")
+        .arg(&expect_script)
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .context("failed to execute expect script")?;
 
     if !status.success() {
         anyhow::bail!("failed to create Lima instance");
     }
 
-    // We answered "n", so instance was not started
+    // Instance was created but not started (we answered "n")
     Ok(false)
 }
 
