@@ -208,6 +208,48 @@ You can use the schema with tools like:
 - VS Code with JSON Schema support
 - Online validators like [jsonschemavalidator.net](https://www.jsonschemavalidator.net/)
 
+## MCP (Model Context Protocol) Support
+
+This project is configured to support MCP (Model Context Protocol) tools, which allow AI agents running outside Lima to securely read, write, and execute files within the VM sandbox.
+
+### What is MCP?
+
+Lima implements the "MCP Sandbox Interface" that provides MCP tools for:
+- **`glob`**: Find files matching glob patterns
+- **`list_directory`**: List directory contents
+- **`read_file`**: Read file contents
+- **`write_file`**: Write content to files
+- **`run_shell_command`**: Execute shell commands
+- **`search_file_content`**: Search for content in files using regex
+
+These tools are more secure and efficient than default AI agent tools because they operate within Lima's sandboxed environment.
+
+### Configuration
+
+MCP support is automatically enabled when:
+1. **Guest agent is enabled** (configured by default in all instances)
+2. **Lima instance is running** (MCP tools are exposed through Lima's host agent)
+
+The guest agent is enabled in both the template (`lima-devshell-template.yaml`) and all dynamically generated configurations.
+
+### Using MCP Tools
+
+To use MCP tools with your Lima instances:
+
+1. **Ensure your Lima instance is running**:
+   ```bash
+   limactl start <instance-name>
+   ```
+
+2. **Configure your MCP-compatible AI agent** to connect to Lima's MCP server. The exact configuration depends on your AI agent, but typically involves:
+   - Specifying Lima as an MCP server
+   - Providing the instance name or connection details
+   - Configuring the root directory for file operations
+
+3. **Use the MCP tools** through your AI agent. The tools will operate within the VM's sandbox, providing secure file access and command execution.
+
+For more details, see the [Lima MCP Tools Documentation](https://lima-vm.io/docs/config/ai/outside/mcp/).
+
 ## Repository Structure
 
 - **Bare repo**: `~/.local/share/git/bare/io.github/bdelanghe/lima-devshell.git/`

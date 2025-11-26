@@ -60,81 +60,118 @@ fn should_enable_rosetta(vm_type: &str) -> bool {
     vm_type == "vz" && std::env::consts::OS == "macos" && detect_arch() == "aarch64"
 }
 
+// Types derived from lima-config-schema.json
+// These structs match the JSON Schema interface - see schema for field descriptions
+
+/// Image configuration (schema: images.items)
+/// Matches lima-config-schema.json properties.images.items
 #[derive(Debug, Serialize, Deserialize)]
 struct Image {
-    location: String,
-    arch: String,
+    location: String, // required
+    arch: String,      // required
+    #[serde(skip_serializing_if = "Option::is_none")]
+    digest: Option<String>, // optional
 }
 
+/// Mount configuration (schema: mounts.items)
+/// Matches lima-config-schema.json properties.mounts.items
 #[derive(Debug, Serialize, Deserialize)]
 struct Mount {
-    location: String,
-    #[serde(rename = "mountPoint")]
-    mount_point: String,
-    writable: bool,
+    location: String, // required
+    #[serde(rename = "mountPoint", skip_serializing_if = "Option::is_none")]
+    mount_point: Option<String>, // optional in schema, but we always set it
+    #[serde(skip_serializing_if = "Option::is_none")]
+    writable: Option<bool>, // default: false in schema
 }
 
+/// SSH configuration (schema: ssh)
+/// Matches lima-config-schema.json properties.ssh
 #[derive(Debug, Serialize, Deserialize)]
 struct SshConfig {
-    #[serde(rename = "localPort")]
-    local_port: u16,
-    #[serde(rename = "loadDotSSHPubKeys")]
-    load_dot_ssh_pub_keys: bool,
+    #[serde(rename = "localPort", skip_serializing_if = "Option::is_none")]
+    local_port: Option<u16>, // 0 = auto-assign, null = default
+    #[serde(rename = "loadDotSSHPubKeys", skip_serializing_if = "Option::is_none")]
+    load_dot_ssh_pub_keys: Option<bool>, // null = default
+    #[serde(rename = "forwardAgent", skip_serializing_if = "Option::is_none")]
+    forward_agent: Option<bool>,
+    #[serde(rename = "forwardX11", skip_serializing_if = "Option::is_none")]
+    forward_x11: Option<bool>,
+    #[serde(rename = "forwardX11Trusted", skip_serializing_if = "Option::is_none")]
+    forward_x11_trusted: Option<bool>,
+    #[serde(rename = "overVsock", skip_serializing_if = "Option::is_none")]
+    over_vsock: Option<bool>,
 }
 
+/// Provision step (schema: provision.items)
+/// Matches lima-config-schema.json properties.provision.items
 #[derive(Debug, Serialize, Deserialize)]
 struct ProvisionStep {
-    mode: String,
-    script: String,
+    mode: String,   // enum: "system" | "user"
+    script: String, // required
 }
 
+/// Guest agent configuration (schema: guestAgent)
+/// Matches lima-config-schema.json properties.guestAgent
 #[derive(Debug, Serialize, Deserialize)]
 struct GuestAgent {
-    enabled: bool,
+    enabled: bool, // required
     #[serde(rename = "logPath", skip_serializing_if = "Option::is_none")]
-    log_path: Option<String>,
+    log_path: Option<String>, // optional
 }
 
+/// Rosetta configuration (schema: rosetta)
+/// Matches lima-config-schema.json properties.rosetta
+/// Note: Schema only has "enabled", but Lima also supports "binfmt"
 #[derive(Debug, Serialize, Deserialize)]
 struct Rosetta {
-    enabled: bool,
+    enabled: bool, // required
     #[serde(skip_serializing_if = "Option::is_none")]
-    binfmt: Option<bool>,
+    binfmt: Option<bool>, // Not in schema but supported by Lima
 }
 
+/// Port forward rule (schema: portForwards.items)
+/// Matches lima-config-schema.json properties.portForwards.items
 #[derive(Debug, Serialize, Deserialize)]
 struct PortForward {
     #[serde(rename = "guestIP", skip_serializing_if = "Option::is_none")]
     guest_ip: Option<String>,
     #[serde(rename = "guestPort", skip_serializing_if = "Option::is_none")]
-    guest_port: Option<u16>,
+    guest_port: Option<u16>, // 1-65535
     #[serde(rename = "guestPortRange", skip_serializing_if = "Option::is_none")]
-    guest_port_range: Option<String>,
+    guest_port_range: Option<String>, // pattern: "^\\d+-\\d+$"
     #[serde(rename = "hostIP", skip_serializing_if = "Option::is_none")]
     host_ip: Option<String>,
     #[serde(rename = "hostPort", skip_serializing_if = "Option::is_none")]
-    host_port: Option<u16>,
+    host_port: Option<u16>, // 1-65535
     #[serde(rename = "hostPortRange", skip_serializing_if = "Option::is_none")]
-    host_port_range: Option<String>,
+    host_port_range: Option<String>, // pattern: "^\\d+-\\d+$"
     #[serde(skip_serializing_if = "Option::is_none")]
-    proto: Option<String>,
+    proto: Option<String>, // enum: "tcp" | "udp", default: "tcp"
     #[serde(skip_serializing_if = "Option::is_none")]
-    ignore: Option<bool>,
+    ignore: Option<bool>, // default: false
 }
 
+/// Lima VM configuration (schema: root)
+/// Matches lima-config-schema.json - this is the main configuration interface
+/// All fields align with the JSON Schema definition
 #[derive(Debug, Serialize, Deserialize)]
 struct LimaConfig {
-    #[serde(rename = "vmType")]
-    vm_type: String,
-    arch: String,
-    images: Vec<Image>,
-    mounts: Vec<Mount>,
-    memory: String,
-    cpus: u32,
-    disk: String,
-    ssh: SshConfig,
-    env: HashMap<String, String>,
-    provision: Vec<ProvisionStep>,
+    #[serde(rename = "vmType", skip_serializing_if = "Option::is_none")]
+    vm_type: Option<String>, // enum: "qemu" | "vz" | "default" | null
+    #[serde(skip_serializing_if = "Option::is_none")]
+    arch: Option<String>, // enum: "default" | "x86_64" | "aarch64" | null
+    images: Vec<Image>,   // default: []
+    mounts: Vec<Mount>,   // default: []
+    #[serde(skip_serializing_if = "Option::is_none")]
+    memory: Option<String>, // pattern: "^\\d+[KMGT]i?B$"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    cpus: Option<u32>, // minimum: 1
+    #[serde(skip_serializing_if = "Option::is_none")]
+    disk: Option<String>, // pattern: "^\\d+[KMGT]i?B$"
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ssh: Option<SshConfig>,
+    env: HashMap<String, String>, // default: {}
+    provision: Vec<ProvisionStep>, // default: []
     #[serde(rename = "guestAgent", skip_serializing_if = "Option::is_none")]
     guest_agent: Option<GuestAgent>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -142,7 +179,7 @@ struct LimaConfig {
     // Explicitly set port forwarding rules (empty for Nix devshells - all access via limactl shell)
     // This makes it clear we're intentionally not forwarding any ports
     #[serde(rename = "portForwards", skip_serializing_if = "Vec::is_empty")]
-    port_forwards: Vec<PortForward>,
+    port_forwards: Vec<PortForward>, // default: []
 }
 
 /// Generate Lima YAML configuration from instance model
@@ -159,34 +196,39 @@ fn generate_lima_yaml_impl(instance: &InstanceModel) -> Result<String> {
     let enable_rosetta = should_enable_rosetta(vm_type);
 
     let config = LimaConfig {
-        vm_type: vm_type.to_string(),
-        arch: arch.to_string(),
+        vm_type: Some(vm_type.to_string()),
+        arch: Some(arch.to_string()),
         images: vec![Image {
             location: image_url,
             arch: arch.to_string(),
+            digest: None,
         }],
         mounts: vec![
             Mount {
                 location: instance.worktree_mount_host.display().to_string(),
-                mount_point: instance.worktree_mount_guest.clone(),
-                writable: true,
+                mount_point: Some(instance.worktree_mount_guest.clone()),
+                writable: Some(true),
             },
             Mount {
                 location: instance.bare_repo_mount_host.display().to_string(),
-                mount_point: instance.bare_repo_mount_guest.clone(),
-                writable: true,
+                mount_point: Some(instance.bare_repo_mount_guest.clone()),
+                writable: Some(true),
             },
         ],
-        memory: MEMORY.to_string(),
-        cpus: CPUS,
-        disk: DISK.to_string(),
+        memory: Some(MEMORY.to_string()),
+        cpus: Some(CPUS),
+        disk: Some(DISK.to_string()),
         // SSH configuration: localPort 0 means auto-assign
         // No explicit network config = default user-mode network (host-only/localhost)
         // This is perfect for Nix devshells: connect via limactl shell or 127.0.0.1
-        ssh: SshConfig {
-            local_port: 0,
-            load_dot_ssh_pub_keys: true,
-        },
+        ssh: Some(SshConfig {
+            local_port: Some(0),
+            load_dot_ssh_pub_keys: Some(true),
+            forward_agent: None,
+            forward_x11: None,
+            forward_x11_trusted: None,
+            over_vsock: None,
+        }),
         env: {
             let mut env = HashMap::new();
             env.insert("LIMA_WORKDIR_DISABLED".to_string(), "1".to_string());
@@ -204,6 +246,9 @@ fi
 "#
             .to_string(),
         }],
+        // Guest agent is required for MCP (Model Context Protocol) tools support
+        // MCP tools allow AI agents outside Lima to securely read, write, and execute files
+        // within the VM sandbox. See: https://lima-vm.io/docs/config/ai/outside/mcp/
         guest_agent: Some(GuestAgent {
             enabled: true,
             log_path: Some("/var/log/lima-guest-agent.log".to_string()),
@@ -672,12 +717,15 @@ mod tests {
 
         let config = parsed.unwrap();
         // Verify VM type and arch match detected host values
-        assert_eq!(config.vm_type, detect_vm_type());
-        assert_eq!(config.arch, detect_arch());
-        assert_eq!(config.memory, "6GiB");
-        assert_eq!(config.cpus, 4);
-        assert_eq!(config.ssh.local_port, 0);
-        assert!(config.ssh.load_dot_ssh_pub_keys);
+        assert_eq!(config.vm_type.as_deref(), Some(detect_vm_type()));
+        assert_eq!(config.arch.as_deref(), Some(detect_arch()));
+        assert_eq!(config.memory.as_deref(), Some("6GiB"));
+        assert_eq!(config.cpus, Some(4));
+        assert_eq!(config.ssh.as_ref().and_then(|s| s.local_port), Some(0));
+        assert_eq!(
+            config.ssh.as_ref().and_then(|s| s.load_dot_ssh_pub_keys),
+            Some(true)
+        );
         assert_eq!(config.mounts.len(), 2);
         assert_eq!(config.provision.len(), 1);
     }
@@ -691,11 +739,13 @@ mod tests {
         // localPort: 0 means auto-assign (good for automation)
         let parsed: LimaConfig = serde_yaml::from_str(&yaml).expect("valid YAML");
         assert_eq!(
-            parsed.ssh.local_port, 0,
+            parsed.ssh.as_ref().and_then(|s| s.local_port),
+            Some(0),
             "localPort should be 0 for auto-assign"
         );
-        assert!(
-            parsed.ssh.load_dot_ssh_pub_keys,
+        assert_eq!(
+            parsed.ssh.as_ref().and_then(|s| s.load_dot_ssh_pub_keys),
+            Some(true),
             "loadDotSSHPubKeys should be true"
         );
     }

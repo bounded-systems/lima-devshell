@@ -56,6 +56,9 @@ provision:
       fi
 
 # Guest agent for better integration
+# Required for MCP (Model Context Protocol) tools support
+# MCP tools allow AI agents outside Lima to securely read, write, and execute files
+# within the VM sandbox. See: https://lima-vm.io/docs/config/ai/outside/mcp/
 guestAgent:
   enabled: true
   logPath: /var/log/lima-guest-agent.log
