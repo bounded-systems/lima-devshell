@@ -17,6 +17,7 @@ disk: 80GiB
 ssh:
   localPort: 0
   loadDotSSHPubKeys: true
+  forwardAgent: true
 env:
   LIMA_WORKDIR_DISABLED: '1'
 provision:
@@ -29,3 +30,11 @@ provision:
       passwd -d dev
       usermod -aG sudo dev
     fi
+guestAgent:
+  enabled: true
+  logPath: /var/log/lima-guest-agent.log
+rosetta:
+  enabled: true
+  binfmt: true
+mountType: virtiofs
+mountInotify: true
