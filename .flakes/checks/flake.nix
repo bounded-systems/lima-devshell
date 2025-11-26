@@ -109,6 +109,17 @@
             bash ${inputsDir}/no-cross-dir-deps-check.sh
             touch $out
           '';
+
+          # Check shell scripts in all inputs directories
+          # Validates syntax, shebangs, and common best practices
+          shell-scripts-check = pkgs.runCommand "shell-scripts-check"
+            {
+              nativeBuildInputs = with pkgs; [ findutils gnugrep ];
+            } ''
+            export PROJECT_ROOT="${projectRoot}"
+            bash ${inputsDir}/shell-scripts-check.sh
+            touch $out
+          '';
         });
     };
 }
