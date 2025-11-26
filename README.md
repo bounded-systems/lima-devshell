@@ -208,6 +208,105 @@ You can use the schema with tools like:
 - VS Code with JSON Schema support
 - Online validators like [jsonschemavalidator.net](https://www.jsonschemavalidator.net/)
 
+## SSH Access
+
+All Lima instances created by `lima-devshell` support SSH access, which is useful for:
+- **VS Code Remote Development**: Connect directly via SSH
+- **Direct terminal access**: Use `ssh` instead of `limactl shell`
+- **CI/CD integration**: Tools that expect SSH connectivity
+- **Git operations**: SSH agent forwarding is enabled for seamless git operations
+
+### SSH Configuration
+
+SSH is automatically configured with:
+- **Auto-assigned ports**: Each instance gets a unique local port (check with `limactl list`)
+- **Public key authentication**: Your `~/.ssh/*.pub` keys are automatically loaded
+- **SSH agent forwarding**: Enabled for git operations and key-based authentication
+
+### Using SSH
+
+#### Option 1: Direct SSH with config file
+
+Lima generates SSH config files for each instance. You can use them directly:
+
+```bash
+# Find the SSH config file for an instance
+limactl list --format='{{.SSHConfigFile}}' <instance-name>
+
+# Connect using the config file
+ssh -F ~/.lima/<instance-name>/ssh.config lima-<instance-name>
+```
+
+#### Option 2: Add to your SSH config (Recommended)
+
+Add this line to your `~/.ssh/config` to automatically include all Lima instances:
+
+```
+Include ~/.lima/*/ssh.config
+```
+
+Then you can connect directly:
+
+```bash
+ssh lima-<instance-name>
+```
+
+This is especially useful for **VS Code Remote Development**, which can automatically discover and connect to Lima instances.
+
+#### Option 3: Direct connection without config
+
+If your SSH client doesn't support config files:
+
+```bash
+# Get the port number
+limactl list --format '{{ .SSHLocalPort }}' <instance-name>
+
+# Connect directly
+ssh -p <PORT> -i ~/.lima/_config/user -o NoHostAuthenticationForLocalhost=yes 127.0.0.1
+```
+
+### VS Code Remote Development
+
+VS Code Remote Development with Lima provides a secure development environment by running VS Code extensions (including AI agents like GitHub Copilot) inside the VM, preventing them from directly executing untrusted commands on your host machine.
+
+#### Setup Steps
+
+1. **Add SSH config include** (one-time setup):
+   
+   Add this line to your `~/.ssh/config`:
+   ```
+   Include ~/.lima/*/ssh.config
+   ```
+
+2. **Install VS Code extensions** (if not already installed):
+   - **Remote Explorer** (for discovering Lima instances)
+   - **Remote - SSH** (for SSH-based remote development)
+
+3. **Connect to your Lima instance**:
+   - Open the **Remote Explorer** in the VS Code sidebar
+   - Select `lima-<instance-name>` from the SSH remote list
+   - VS Code will connect and install the remote server components
+
+4. **Open your workspace**:
+   - Once connected, use **File > Open Folder**
+   - Navigate to your mounted worktree at `/worktrees/io.github/.../...`
+   - Or use **File > Clone Git Repository** to clone a new repository
+
+#### Security Benefits
+
+Running VS Code in Lima provides security benefits:
+- **AI agent isolation**: Extensions like GitHub Copilot run inside the VM, not on your host
+- **Sandboxed execution**: Untrusted code execution is contained within the VM
+- **File access control**: Only mounted directories are accessible to VS Code
+
+#### Optional: Enhanced Security with `--mount-none`
+
+For maximum security (especially with AI agents), you can start instances with `--mount-none` to prevent access to host files. However, this conflicts with `lima-devshell`'s mount-based workflow, so it's only recommended if you're manually managing instances and copying files with `limactl cp`.
+
+For `lima-devshell` workflows, the default mount configuration provides a good balance of security and functionality.
+
+For more details, see the [Lima VS Code Documentation](https://lima-vm.io/docs/examples/vscode/).
+
 ## MCP (Model Context Protocol) Support
 
 This project is configured to support MCP (Model Context Protocol) tools, which allow AI agents running outside Lima to securely read, write, and execute files within the VM sandbox.

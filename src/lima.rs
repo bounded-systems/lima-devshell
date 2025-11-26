@@ -220,11 +220,12 @@ fn generate_lima_yaml_impl(instance: &InstanceModel) -> Result<String> {
         disk: Some(DISK.to_string()),
         // SSH configuration: localPort 0 means auto-assign
         // No explicit network config = default user-mode network (host-only/localhost)
-        // This is perfect for Nix devshells: connect via limactl shell or 127.0.0.1
+        // This is perfect for Nix devshells: connect via limactl shell, SSH, or 127.0.0.1
+        // forwardAgent enables SSH agent forwarding for git operations and key-based auth
         ssh: Some(SshConfig {
             local_port: Some(0),
             load_dot_ssh_pub_keys: Some(true),
-            forward_agent: None,
+            forward_agent: Some(true), // Enable SSH agent forwarding for git operations
             forward_x11: None,
             forward_x11_trusted: None,
             over_vsock: None,

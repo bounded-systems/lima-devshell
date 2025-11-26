@@ -35,9 +35,12 @@ disk: 80GiB
 mounts: []
 
 # SSH configuration
+# Enables SSH access for tools like VS Code Remote Development
+# See: https://lima-vm.io/docs/usage/ssh/
 ssh:
-  localPort: 0  # Auto-assign port
-  loadDotSSHPubKeys: true
+  localPort: 0  # Auto-assign port (use limactl list to find the port)
+  loadDotSSHPubKeys: true  # Load ~/.ssh/*.pub keys automatically
+  forwardAgent: true  # Forward SSH agent for git operations
 
 # Environment variables
 env:
