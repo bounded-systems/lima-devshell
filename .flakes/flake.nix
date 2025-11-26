@@ -98,19 +98,20 @@
           wrappedPackages = lib.mapAttrs wrapInDir allPackages;
           wrappedChecks = lib.mapAttrs (name: check: wrapInDir "check-${name}" check) allChecks;
 
+          # Create JSON manifest of all packages and checks
+          manifest = pkgs.writeText "manifest.json" (builtins.toJSON {
+            packages = lib.attrNames allPackages;
+            checks = lib.attrNames allChecks;
+            built_at = "Nix build timestamp";
+          });
+
           # Create an "all" package that builds everything
           all = pkgs.symlinkJoin {
             name = "all";
-            paths = lib.attrValues wrappedPackages ++ lib.attrValues wrappedChecks;
-            # Create a manifest file listing what was built
+            paths = lib.attrValues wrappedPackages ++ lib.attrValues wrappedChecks ++ [ manifest ];
+            # Rename manifest.json to MANIFEST.json for consistency
             postBuild = ''
-              echo "Built all packages and checks:" > $out/MANIFEST.txt
-              echo "" >> $out/MANIFEST.txt
-              echo "Packages:" >> $out/MANIFEST.txt
-              ${lib.concatMapStringsSep "\n" (name: "echo '  - ${name}' >> $out/MANIFEST.txt") (lib.attrNames allPackages)}
-              echo "" >> $out/MANIFEST.txt
-              echo "Checks:" >> $out/MANIFEST.txt
-              ${lib.concatMapStringsSep "\n" (name: "echo '  - ${name}' >> $out/MANIFEST.txt") (lib.attrNames allChecks)}
+              mv $out/manifest.json $out/MANIFEST.json 2>/dev/null || true
             '';
           };
         in
