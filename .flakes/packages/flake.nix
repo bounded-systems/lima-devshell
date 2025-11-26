@@ -3,12 +3,18 @@
 # It must not import from other .flakes/* directories.
 # All cross-space composition happens in .flakes/flake.nix (the router).
 #
-# Inputs are defined in inputs/flake.nix to keep this file focused on outputs.
+# Input metadata and documentation is stored in inputs/ directory.
 {
   description = "Build artifacts and binaries";
 
-  # Import inputs from inputs/flake.nix
-  inputs = import ./inputs/flake.nix;
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    crane.url = "github:ipetkov/crane";
+    # Project root path (git repo root) - non-flake path input
+    # Default to parent directory for standalone use, overridden by parent via follows
+    project-root.url = "path:..";
+    project-root.flake = false;
+  };
 
   outputs = { self, nixpkgs, crane, project-root }:
     let

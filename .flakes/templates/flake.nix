@@ -1,10 +1,7 @@
 # Templates flake has no inputs - it only provides template outputs.
-# Inputs are defined in inputs/flake.nix (empty) to maintain consistency.
+# Input metadata and documentation is stored in inputs/ directory.
 {
   description = "Project templates for bootstrapping";
-
-  # Import inputs from inputs/flake.nix (empty for templates)
-  inputs = import ./inputs/flake.nix;
 
   outputs = { self }:
     {

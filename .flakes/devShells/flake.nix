@@ -3,12 +3,13 @@
 # It must not import from other .flakes/* directories.
 # All cross-space composition happens in .flakes/flake.nix (the router).
 #
-# Inputs are defined in inputs/flake.nix to keep this file focused on outputs.
+# Input metadata and documentation is stored in inputs/ directory.
 {
   description = "Development shells module";
 
-  # Import inputs from inputs/flake.nix
-  inputs = import ./inputs/flake.nix;
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+  };
 
   outputs = { self, nixpkgs }:
     let
