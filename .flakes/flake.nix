@@ -71,10 +71,30 @@
           pkgs = pkgsFor system;
           allPackages = packages-flake.${system}.packages;
           allChecks = checks-flake.${system}.checks;
+          # Helper function to wrap single-file outputs in directories
+          wrapInDir = name: drv:
+            pkgs.runCommand "${name}-wrapped"
+              {
+                inherit drv;
+              } ''
+              mkdir -p $out
+              if [ -f "$drv" ]; then
+                # It's a single file, wrap it in a directory
+                cp "$drv" "$out/${name}"
+              else
+                # It's a directory, symlink its contents
+                ln -s "$drv"/* "$out/" 2>/dev/null || cp -r "$drv"/* "$out/" 2>/dev/null || true
+              fi
+            '';
+
+          # Wrap all packages and checks (single files become directories)
+          wrappedPackages = lib.mapAttrs wrapInDir allPackages;
+          wrappedChecks = lib.mapAttrs (name: check: wrapInDir "check-${name}" check) allChecks;
+
           # Create an "all" package that builds everything
           all = pkgs.symlinkJoin {
             name = "all";
-            paths = lib.attrValues allPackages ++ lib.attrValues allChecks;
+            paths = lib.attrValues wrappedPackages ++ lib.attrValues wrappedChecks;
             # Create a manifest file listing what was built
             postBuild = ''
               echo "Built all packages and checks:" > $out/MANIFEST.txt
