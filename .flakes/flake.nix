@@ -102,7 +102,7 @@
           manifest = pkgs.writeText "manifest.json" (builtins.toJSON {
             packages = lib.attrNames allPackages;
             checks = lib.attrNames allChecks;
-            built_at = "Nix build timestamp";
+            total_count = (lib.length (lib.attrNames allPackages)) + (lib.length (lib.attrNames allChecks));
           });
 
           # Create an "all" package that builds everything
