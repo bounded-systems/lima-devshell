@@ -35,4 +35,3 @@ echo "  2. Build with: nix build"
 echo ""
 echo "Note: Nix will download and cache dependencies automatically."
 echo "      No vendoring needed - buildRustPackage handles it."
-

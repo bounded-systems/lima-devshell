@@ -7,7 +7,10 @@ set -euo pipefail
 # Use current directory (where user runs the command), not store path
 # User should run this from the project root
 PROJECT_ROOT="''${PROJECT_ROOT:-$PWD}"
-cd "$PROJECT_ROOT" || { echo "Error: Cannot access project root: $PROJECT_ROOT" >&2; exit 1; }
+cd "$PROJECT_ROOT" || {
+	echo "Error: Cannot access project root: $PROJECT_ROOT" >&2
+	exit 1
+}
 PROJECT_ROOT=$(pwd)
 
 # Use system nix (Determinate Systems) from PATH
@@ -27,42 +30,42 @@ trap "rm -f $temp_file" EXIT
 
 # Add root flake if it exists
 if [ -f "$PROJECT_ROOT/flake.nix" ]; then
-  echo "root|$PROJECT_ROOT" >> "$temp_file"
+	echo "root|$PROJECT_ROOT" >>"$temp_file"
 fi
 
 # Find all flakes in .flakes/ directory and subdirectories
 find_temp=$(mktemp)
 if [ -d "$PROJECT_ROOT/.flakes" ]; then
-  # First, add .flakes/flake.nix if it exists (depth 1)
-  if [ -f "$PROJECT_ROOT/.flakes/flake.nix" ]; then
-    echo ".flakes|$PROJECT_ROOT/.flakes" >> "$temp_file"
-  fi
-  # Then find flakes in subdirectories (depth 2)
-  find "$PROJECT_ROOT/.flakes" -mindepth 2 -maxdepth 2 -name "flake.nix" -type f 2>/dev/null > "$find_temp" || true
-  while read -r flake_file; do
-    flake_dir=$(dirname "$flake_file")
-    flake_name=".flakes/$(basename "$flake_dir")"
-    echo "$flake_name|$flake_dir" >> "$temp_file"
-  done < "$find_temp"
-  rm -f "$find_temp"
+	# First, add .flakes/flake.nix if it exists (depth 1)
+	if [ -f "$PROJECT_ROOT/.flakes/flake.nix" ]; then
+		echo ".flakes|$PROJECT_ROOT/.flakes" >>"$temp_file"
+	fi
+	# Then find flakes in subdirectories (depth 2)
+	find "$PROJECT_ROOT/.flakes" -mindepth 2 -maxdepth 2 -name "flake.nix" -type f 2>/dev/null >"$find_temp" || true
+	while read -r flake_file; do
+		flake_dir=$(dirname "$flake_file")
+		flake_name=".flakes/$(basename "$flake_dir")"
+		echo "$flake_name|$flake_dir" >>"$temp_file"
+	done <"$find_temp"
+	rm -f "$find_temp"
 fi
 
 # Count flakes
-flake_count=$(wc -l < "$temp_file" 2>/dev/null || echo "0")
+flake_count=$(wc -l <"$temp_file" 2>/dev/null || echo "0")
 
 # List all flakes found
 if [ "$flake_count" -eq 0 ]; then
-  echo "No flakes found to lock."
-  exit 0
+	echo "No flakes found to lock."
+	exit 0
 fi
 
 echo "Found $flake_count flake(s):"
 line_num=1
 while IFS='|' read -r flake_name flake_dir; do
-  echo "  $line_num. $flake_name"
-  echo "     $flake_dir"
-  ((line_num++))
-done < "$temp_file"
+	echo "  $line_num. $flake_name"
+	echo "     $flake_dir"
+	((line_num++))
+done <"$temp_file"
 echo ""
 
 # Track success/failure
@@ -74,100 +77,100 @@ commits_made=0
 
 # Function to commit lock file after each lock
 commit_lock_file() {
-  local flake_dir="$1"
-  local flake_name="$2"
-  local lock_file="$flake_dir/flake.lock"
-  
-  if [ ! -f "$lock_file" ]; then
-    return
-  fi
-  
-  # Check if we're in a git repo
-  if ! git rev-parse --git-dir >/dev/null 2>&1; then
-    return
-  fi
-  
-  # Check if lock file has changes
-  if git diff --quiet "$lock_file" 2>/dev/null && git diff --cached --quiet "$lock_file" 2>/dev/null; then
-    # No changes to commit
-    return
-  fi
-  
-  # Add and commit the lock file
-  if git add "$lock_file" >/dev/null 2>&1; then
-    if git commit -m "chore: lock flake.lock for $flake_name" >/dev/null 2>&1; then
-      ((commits_made++))
-      echo "  ✓ Committed lock file"
-    fi
-  fi
+	local flake_dir="$1"
+	local flake_name="$2"
+	local lock_file="$flake_dir/flake.lock"
+
+	if [ ! -f "$lock_file" ]; then
+		return
+	fi
+
+	# Check if we're in a git repo
+	if ! git rev-parse --git-dir >/dev/null 2>&1; then
+		return
+	fi
+
+	# Check if lock file has changes
+	if git diff --quiet "$lock_file" 2>/dev/null && git diff --cached --quiet "$lock_file" 2>/dev/null; then
+		# No changes to commit
+		return
+	fi
+
+	# Add and commit the lock file
+	if git add "$lock_file" >/dev/null 2>&1; then
+		if git commit -m "chore: lock flake.lock for $flake_name" >/dev/null 2>&1; then
+			((commits_made++))
+			echo "  ✓ Committed lock file"
+		fi
+	fi
 }
 
 # Function to lock a flake in a directory
 lock_flake() {
-  local flake_dir="$1"
-  local flake_name="$2"
-  
-  echo "Locking: $flake_name"
-  echo "  Directory: $flake_dir"
-  
-  # Check if directory is writable (not a Nix store path)
-  if [[ "$flake_dir" == /nix/store/* ]]; then
-    echo "  ⚠ Skipping: Directory is in Nix store (read-only)"
-    echo "  Hint: Run this command from your project directory, not via nix run"
-    ((failed++))
-    failed_dirs+=("$flake_name (read-only)")
-    echo ""
-    return
-  fi
-  
-  # Ensure directory is writable
-  if [ ! -w "$flake_dir" ]; then
-    echo "  ✗ Directory is not writable"
-    ((failed++))
-    failed_dirs+=("$flake_name")
-    echo ""
-    return
-  fi
-  
-  # Lock the flake (creates/updates lock file without updating inputs)
-  local lock_file="$flake_dir/flake.lock"
-  local had_lock_before=false
-  if [ -f "$lock_file" ]; then
-    had_lock_before=true
-  fi
-  
-  if cd "$flake_dir" && nix flake lock --no-warn-dirty 2>&1; then
-    # Check if lock file exists now
-    if [ -f "$lock_file" ]; then
-      echo "  ✓ Locked successfully"
-      ((locked++))
-      # Commit lock file immediately after successful lock to keep repo clean
-      commit_lock_file "$flake_dir" "$flake_name"
-    elif [ "$had_lock_before" = false ]; then
-      # No lock file and there wasn't one before - flake likely has no inputs
-      # This is valid for flakes with no inputs (like templates)
-      echo "  ✓ Locked successfully (no inputs, no lock file needed)"
-      ((locked++))
-    else
-      # Had a lock file before but it's gone now - this is an error
-      echo "  ✗ Lock failed: Lock file disappeared after lock"
-      ((failed++))
-      failed_dirs+=("$flake_name")
-    fi
-  else
-    echo "  ✗ Lock failed"
-    ((failed++))
-    failed_dirs+=("$flake_name")
-  fi
-  echo ""
+	local flake_dir="$1"
+	local flake_name="$2"
+
+	echo "Locking: $flake_name"
+	echo "  Directory: $flake_dir"
+
+	# Check if directory is writable (not a Nix store path)
+	if [[ $flake_dir == /nix/store/* ]]; then
+		echo "  ⚠ Skipping: Directory is in Nix store (read-only)"
+		echo "  Hint: Run this command from your project directory, not via nix run"
+		((failed++))
+		failed_dirs+=("$flake_name (read-only)")
+		echo ""
+		return
+	fi
+
+	# Ensure directory is writable
+	if [ ! -w "$flake_dir" ]; then
+		echo "  ✗ Directory is not writable"
+		((failed++))
+		failed_dirs+=("$flake_name")
+		echo ""
+		return
+	fi
+
+	# Lock the flake (creates/updates lock file without updating inputs)
+	local lock_file="$flake_dir/flake.lock"
+	local had_lock_before=false
+	if [ -f "$lock_file" ]; then
+		had_lock_before=true
+	fi
+
+	if cd "$flake_dir" && nix flake lock --no-warn-dirty 2>&1; then
+		# Check if lock file exists now
+		if [ -f "$lock_file" ]; then
+			echo "  ✓ Locked successfully"
+			((locked++))
+			# Commit lock file immediately after successful lock to keep repo clean
+			commit_lock_file "$flake_dir" "$flake_name"
+		elif [ "$had_lock_before" = false ]; then
+			# No lock file and there wasn't one before - flake likely has no inputs
+			# This is valid for flakes with no inputs (like templates)
+			echo "  ✓ Locked successfully (no inputs, no lock file needed)"
+			((locked++))
+		else
+			# Had a lock file before but it's gone now - this is an error
+			echo "  ✗ Lock failed: Lock file disappeared after lock"
+			((failed++))
+			failed_dirs+=("$flake_name")
+		fi
+	else
+		echo "  ✗ Lock failed"
+		((failed++))
+		failed_dirs+=("$flake_name")
+	fi
+	echo ""
 }
 
 # Lock all collected flakes
 set +e
 while IFS='|' read -r flake_name flake_dir || [ -n "$flake_name" ]; do
-  [ -z "$flake_name" ] && continue
-  lock_flake "$flake_dir" "$flake_name" || true
-done < "$temp_file"
+	[ -z "$flake_name" ] && continue
+	lock_flake "$flake_dir" "$flake_name" || true
+done <"$temp_file"
 set -e
 
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -176,18 +179,17 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo "  Locked:        $locked"
 echo "  Failed:        $failed"
 if [ $commits_made -gt 0 ]; then
-  echo "  Commits made:   $commits_made"
+	echo "  Commits made:   $commits_made"
 fi
 
 if [ $failed -gt 0 ]; then
-  echo ""
-  echo "Failed flakes:"
-  for dir in "''${failed_dirs[@]}"; do
-    echo "  - $dir"
-  done
-  exit 1
+	echo ""
+	echo "Failed flakes:"
+	for dir in "''${failed_dirs[@]}"; do
+		echo "  - $dir"
+	done
+	exit 1
 fi
 
 echo ""
 echo "✓ All flakes locked successfully"
-
