@@ -101,5 +101,6 @@
         lib.mapAttrs
           (name: def: mkAppFromScript name (scriptPath def.script) def.description)
           appDefinitions
+      );
     };
 }
