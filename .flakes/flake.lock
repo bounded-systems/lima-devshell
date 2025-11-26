@@ -1,5 +1,31 @@
 {
   "nodes": {
+    "apps": {
+      "inputs": {
+        "nixpkgs": [
+          "checks-flake",
+          "packages",
+          "nixpkgs"
+        ],
+        "project-root": [
+          "checks-flake",
+          "packages",
+          "project-root"
+        ]
+      },
+      "locked": {
+        "path": "../apps",
+        "type": "path"
+      },
+      "original": {
+        "path": "../apps",
+        "type": "path"
+      },
+      "parent": [
+        "checks-flake",
+        "packages"
+      ]
+    },
     "apps-flake": {
       "inputs": {
         "nixpkgs": [
@@ -18,6 +44,29 @@
         "type": "path"
       },
       "parent": []
+    },
+    "apps_2": {
+      "inputs": {
+        "nixpkgs": [
+          "packages-flake",
+          "nixpkgs"
+        ],
+        "project-root": [
+          "packages-flake",
+          "project-root"
+        ]
+      },
+      "locked": {
+        "path": "../apps",
+        "type": "path"
+      },
+      "original": {
+        "path": "../apps",
+        "type": "path"
+      },
+      "parent": [
+        "packages-flake"
+      ]
     },
     "checks-flake": {
       "inputs": {
@@ -107,6 +156,7 @@
     },
     "packages": {
       "inputs": {
+        "apps": "apps",
         "crane": [
           "checks-flake",
           "crane"
@@ -134,6 +184,7 @@
     },
     "packages-flake": {
       "inputs": {
+        "apps": "apps_2",
         "crane": [
           "crane"
         ],
