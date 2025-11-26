@@ -352,7 +352,34 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &Path) -> Result<
         "lima-devshell: ensuring Lima instance '{}' is created and running...",
         instance.name
     );
-    start_lima_instance_with_yaml(&instance.name, &local_yaml_path)?;
+
+    // Retry logic for port conflicts - sometimes stale processes hold ports
+    let max_retries = 3;
+    for attempt in 1..=max_retries {
+        match start_lima_instance_with_yaml(&instance.name, &local_yaml_path) {
+            Ok(_) => break,
+            Err(e) => {
+                let error_msg = e.to_string();
+                // Check if this is a port conflict error
+                if attempt < max_retries
+                    && (error_msg.contains("address already in use")
+                        || error_msg.contains("bind"))
+                {
+                    println!(
+                        "lima-devshell: port conflict detected, retrying (attempt {}/{})...",
+                        attempt, max_retries
+                    );
+                    // Force cleanup and retry
+                    let _ = stop_lima_instance(&instance.name);
+                    let _ = delete_lima_instance(&instance.name);
+                    thread::sleep(Duration::from_secs(2));
+                    continue;
+                } else {
+                    return Err(e);
+                }
+            }
+        }
+    }
 
     // Wait for the instance to be fully ready (guest agent connected)
     wait_for_instance_ready(&instance.name, 60)?;
