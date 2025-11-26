@@ -11,4 +11,3 @@ echo "Formatting Nix files..."
 find . -name "*.nix" -type f -print0 | xargs -0 -r nixpkgs-fmt
 
 echo "✓ Nix formatting complete"
-

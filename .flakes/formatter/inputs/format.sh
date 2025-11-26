@@ -15,33 +15,32 @@ find . -name "*.nix" -type f -print0 | xargs -0 -r nixpkgs-fmt
 
 echo "Formatting Rust files..."
 if [ -f "Cargo.toml" ]; then
-  # Count Rust files
-  rust_file_count=$(find . -name "*.rs" -type f | wc -l | tr -d ' ')
-  if [ "$rust_file_count" -gt 0 ]; then
-    echo "Found $rust_file_count Rust file(s)"
-    cargo fmt --all || {
-      echo "Warning: cargo fmt failed or made no changes" >&2
-      exit 0
-    }
-    echo "Rust formatting complete"
-  else
-    echo "No Rust files found, skipping Rust formatting"
-  fi
+	# Count Rust files
+	rust_file_count=$(find . -name "*.rs" -type f | wc -l | tr -d ' ')
+	if [ "$rust_file_count" -gt 0 ]; then
+		echo "Found $rust_file_count Rust file(s)"
+		cargo fmt --all || {
+			echo "Warning: cargo fmt failed or made no changes" >&2
+			exit 0
+		}
+		echo "Rust formatting complete"
+	else
+		echo "No Rust files found, skipping Rust formatting"
+	fi
 else
-  echo "No Cargo.toml found, skipping Rust formatting"
+	echo "No Cargo.toml found, skipping Rust formatting"
 fi
 
 echo "Formatting shell files..."
 # Format shell files (sh, bash, zsh)
 shell_file_count=$(find . -name "*.sh" -o -name "*.bash" -o -name "*.zsh" | wc -l | tr -d ' ')
 if [ "$shell_file_count" -gt 0 ]; then
-  echo "Found $shell_file_count shell file(s)"
-  find . \( -name "*.sh" -o -name "*.bash" -o -name "*.zsh" \) -type f -print0 | xargs -0 -r shfmt -w -s || {
-    echo "Warning: shfmt failed or made no changes" >&2
-    exit 0
-  }
-  echo "Shell formatting complete"
+	echo "Found $shell_file_count shell file(s)"
+	find . \( -name "*.sh" -o -name "*.bash" -o -name "*.zsh" \) -type f -print0 | xargs -0 -r shfmt -w -s || {
+		echo "Warning: shfmt failed or made no changes" >&2
+		exit 0
+	}
+	echo "Shell formatting complete"
 else
-  echo "No shell files found, skipping shell formatting"
+	echo "No shell files found, skipping shell formatting"
 fi
-
