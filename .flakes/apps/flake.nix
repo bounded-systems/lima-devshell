@@ -34,7 +34,8 @@
           projectRoot = toString project-root;
           
           # Inputs directory path (relative to project root)
-          inputsDir = project-root + "/.flakes/apps/inputs";
+          # project-root points to .flakes/ (from path:..), so we need apps/inputs
+          inputsDir = project-root + "/apps/inputs";
           
           # Helper to get script path from filename
           scriptPath = scriptName: inputsDir + "/${scriptName}";
