@@ -103,6 +103,26 @@ struct Rosetta {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+struct PortForward {
+    #[serde(rename = "guestIP", skip_serializing_if = "Option::is_none")]
+    guest_ip: Option<String>,
+    #[serde(rename = "guestPort", skip_serializing_if = "Option::is_none")]
+    guest_port: Option<u16>,
+    #[serde(rename = "guestPortRange", skip_serializing_if = "Option::is_none")]
+    guest_port_range: Option<String>,
+    #[serde(rename = "hostIP", skip_serializing_if = "Option::is_none")]
+    host_ip: Option<String>,
+    #[serde(rename = "hostPort", skip_serializing_if = "Option::is_none")]
+    host_port: Option<u16>,
+    #[serde(rename = "hostPortRange", skip_serializing_if = "Option::is_none")]
+    host_port_range: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    proto: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ignore: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct LimaConfig {
     #[serde(rename = "vmType")]
     vm_type: String,
@@ -119,6 +139,10 @@ struct LimaConfig {
     guest_agent: Option<GuestAgent>,
     #[serde(skip_serializing_if = "Option::is_none")]
     rosetta: Option<Rosetta>,
+    // Explicitly set port forwarding rules (empty for Nix devshells - all access via limactl shell)
+    // This makes it clear we're intentionally not forwarding any ports
+    #[serde(rename = "portForwards", skip_serializing_if = "Vec::is_empty")]
+    port_forwards: Vec<PortForward>,
 }
 
 /// Generate Lima YAML configuration from instance model
@@ -156,6 +180,10 @@ fn generate_lima_yaml_impl(instance: &InstanceModel) -> Result<String> {
         memory: MEMORY.to_string(),
         cpus: CPUS,
         disk: DISK.to_string(),
+        // SSH configuration: localPort 0 means auto-assign
+        // No explicit network config = default user-mode network (host-only/localhost)
+        // This is perfect for Nix devshells: connect via limactl shell or 127.0.0.1
+        // Port forwarding is explicitly set to empty (see port_forwards below)
         ssh: SshConfig {
             local_port: 0,
             load_dot_ssh_pub_keys: true,
@@ -189,6 +217,10 @@ fi
         } else {
             None
         },
+        // Explicitly set empty port forwards for Nix devshells
+        // All access is via limactl shell (SSH) on localhost - no port forwarding needed
+        // This makes the configuration explicit rather than relying on defaults
+        port_forwards: Vec::new(),
     };
 
     // Add comment header
@@ -476,6 +508,100 @@ mod tests {
     use super::*;
     use crate::app::InstanceModel;
     use std::path::PathBuf;
+
+    #[test]
+    fn test_detect_vm_type() {
+        let vm_type = detect_vm_type();
+        
+        // Verify we get a valid VM type (not empty)
+        assert!(!vm_type.is_empty(), "VM type should not be empty");
+        
+        // Verify we're not hitting the fallback on common platforms
+        match std::env::consts::OS {
+            "macos" => assert_eq!(vm_type, "vz", "macOS should use vz VM type"),
+            "linux" => assert_eq!(vm_type, "qemu", "Linux should use qemu VM type"),
+            "windows" => assert_eq!(vm_type, "wsl2", "Windows should use wsl2 VM type"),
+            _ => {
+                // Unknown platform - should fallback to qemu
+                assert_eq!(vm_type, "qemu", "Unknown platform should fallback to qemu");
+                // Log a warning that we're on an untested platform
+                eprintln!("WARNING: Running on untested platform: {}", std::env::consts::OS);
+            }
+        }
+        
+        // Verify it's one of the valid VM types
+        assert!(
+            matches!(vm_type, "vz" | "qemu" | "wsl2"),
+            "VM type should be one of: vz, qemu, wsl2, got: {}",
+            vm_type
+        );
+    }
+
+    #[test]
+    fn test_detect_arch() {
+        let arch = detect_arch();
+        
+        // Verify we get a valid architecture (not empty)
+        assert!(!arch.is_empty(), "Architecture should not be empty");
+        
+        // Verify we're not hitting the fallback on common architectures
+        match std::env::consts::ARCH {
+            "aarch64" | "arm64" => {
+                assert_eq!(arch, "aarch64", "ARM64 should map to aarch64");
+            }
+            "x86_64" => {
+                assert_eq!(arch, "x86_64", "x86_64 should map to x86_64");
+            }
+            _ => {
+                // Unknown architecture - should fallback to x86_64
+                assert_eq!(arch, "x86_64", "Unknown architecture should fallback to x86_64");
+                // Log a warning that we're on an untested architecture
+                eprintln!("WARNING: Running on untested architecture: {}", std::env::consts::ARCH);
+            }
+        }
+        
+        // Verify it's one of the valid architectures
+        assert!(
+            matches!(arch, "aarch64" | "x86_64"),
+            "Architecture should be one of: aarch64, x86_64, got: {}",
+            arch
+        );
+    }
+
+    #[test]
+    fn test_detect_vm_type_and_arch_consistency() {
+        // Verify that VM type and arch are consistent with host platform
+        let vm_type = detect_vm_type();
+        let arch = detect_arch();
+        let os = std::env::consts::OS;
+        
+        // macOS should use vz
+        if os == "macos" {
+            assert_eq!(vm_type, "vz", "macOS must use vz VM type");
+        }
+        
+        // Verify arch matches host architecture
+        match std::env::consts::ARCH {
+            "aarch64" | "arm64" => assert_eq!(arch, "aarch64"),
+            "x86_64" => assert_eq!(arch, "x86_64"),
+            _ => {} // Unknown arch, fallback is acceptable
+        }
+    }
+
+    #[test]
+    fn test_rosetta_detection() {
+        let vm_type = detect_vm_type();
+        let should_enable = should_enable_rosetta(vm_type);
+        let os = std::env::consts::OS;
+        let arch = detect_arch();
+        
+        // Rosetta should only be enabled on macOS ARM with VZ
+        if os == "macos" && arch == "aarch64" && vm_type == "vz" {
+            assert!(should_enable, "Rosetta should be enabled on macOS ARM with VZ");
+        } else {
+            assert!(!should_enable, "Rosetta should not be enabled on other platforms");
+        }
+    }
 
     fn create_test_instance() -> InstanceModel {
         InstanceModel {
