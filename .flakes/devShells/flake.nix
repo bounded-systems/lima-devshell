@@ -9,18 +9,19 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    lib-flake.url = "path:../lib";
     # Inputs directory - static files only (shell hooks, templates, etc.)
     inputs.url = "path:./inputs";
     inputs.flake = false;
   };
 
-  outputs = { self, nixpkgs, inputs }:
+  outputs = { self, nixpkgs, lib-flake, inputs }:
     let
-      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
-      # Import nixpkgs for lib access
-      pkgsFor = system: import nixpkgs { inherit system; };
-      lib = (pkgsFor "x86_64-linux").lib;
-      perSystem = f: lib.genAttrs systems f;
+      # Use helpers from lib-flake (shared via router)
+      systems = lib-flake.lib.systems;
+      pkgsFor = lib-flake.lib.pkgsFor;
+      perSystem = lib-flake.lib.perSystem;
+      lib = nixpkgs.lib;
     in
     {
       devShells = perSystem (system:

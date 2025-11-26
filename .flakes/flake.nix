@@ -72,8 +72,9 @@
     # DevShells flake
     devShells-flake.url = "path:./devShells";
 
-    # Share nixpkgs with devShells flake
+    # Share nixpkgs and lib-flake with devShells flake
     devShells-flake.inputs.nixpkgs.follows = "nixpkgs";
+    devShells-flake.inputs.lib-flake.follows = "lib-flake";
   };
 
   outputs = { self, nixpkgs, project-root, apps-flake, checks-flake, formatter-flake, packages-flake, lib-flake, devShells-flake, flake-schemas, routes-core, ... }:
