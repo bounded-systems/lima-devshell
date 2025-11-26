@@ -11,87 +11,88 @@
       # Import nixpkgs for lib access
       pkgsFor = system: import nixpkgs { inherit system; };
       lib = (pkgsFor "x86_64-linux").lib;
-      forAllSystems = f: lib.genAttrs systems f;
+      perSystem = f: lib.genAttrs systems f;
     in
-    forAllSystems (system:
-      let
-        pkgs = import nixpkgs {
-          inherit system;
-          config.allowUnfree = true;
-        };
+    {
+      devShells = perSystem (system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
 
-        # Tooling packages (merged from config/tooling)
-        tooling = with pkgs; [
-          # Rust toolchain
-          rustc
-          cargo
-          rustfmt
-          clippy
-          rust-analyzer
+          # Tooling packages (merged from config/tooling)
+          tooling = with pkgs; [
+            # Rust toolchain
+            rustc
+            cargo
+            rustfmt
+            clippy
+            rust-analyzer
 
-          # Build dependencies (matching root flake)
-          libgit2
-          pkg-config
+            # Build dependencies (matching root flake)
+            libgit2
+            pkg-config
 
-          # Development tools
-          git
-          just # Task runner (optional, but useful)
+            # Development tools
+            git
+            just # Task runner (optional, but useful)
 
-          # Linting and formatting
-          nixpkgs-fmt # For formatting flake.nix files
+            # Linting and formatting
+            nixpkgs-fmt # For formatting flake.nix files
 
-          # Testing and debugging
-          gdb # Debugger
-        ];
+            # Testing and debugging
+            gdb # Debugger
+          ];
 
-        # Environment variables (merged from config/env)
-        env = {
-          # Rust development environment
-          RUST_BACKTRACE = "1";
-          RUST_LOG = "debug";
+          # Environment variables (merged from config/env)
+          env = {
+            # Rust development environment
+            RUST_BACKTRACE = "1";
+            RUST_LOG = "debug";
 
-          # Cargo configuration for proper locking
-          # Cargo will manage Cargo.lock in the project root
-          # No need to set CARGO_HOME - let cargo use default or system location
-        };
+            # Cargo configuration for proper locking
+            # Cargo will manage Cargo.lock in the project root
+            # No need to set CARGO_HOME - let cargo use default or system location
+          };
 
-        # Shell hook (display help text with variable substitution)
-        shellHook = ''
-          # Display help text with variable substitution
-          cat <<EOF
-          🔧 lima-devshell development environment
-          Rust: $(rustc --version)
-          Cargo: $(cargo --version)
+          # Shell hook (display help text with variable substitution)
+          shellHook = ''
+            # Display help text with variable substitution
+            cat <<EOF
+            🔧 lima-devshell development environment
+            Rust: $(rustc --version)
+            Cargo: $(cargo --version)
 
-          Environment:
-            RUST_BACKTRACE=$RUST_BACKTRACE
-            RUST_LOG=$RUST_LOG
+            Environment:
+              RUST_BACKTRACE=$RUST_BACKTRACE
+              RUST_LOG=$RUST_LOG
 
-          Available commands:
-            cargo build          - Build the project
-            cargo build --release - Build release binary
-            cargo test            - Run tests
-            cargo clippy          - Run clippy linter
-            cargo fmt             - Format code
-            cargo update          - Update dependencies (updates Cargo.lock)
+            Available commands:
+              cargo build          - Build the project
+              cargo build --release - Build release binary
+              cargo test            - Run tests
+              cargo clippy          - Run clippy linter
+              cargo fmt             - Format code
+              cargo update          - Update dependencies (updates Cargo.lock)
 
-          Nix commands:
-            nix fmt               - Format all nix files
-            nix flake check       - Check flake validity
+            Nix commands:
+              nix fmt               - Format all nix files
+              nix flake check       - Check flake validity
 
-          Cargo locking:
-            Cargo.lock is managed by cargo in the project root
-            Run 'cargo update' to update dependencies and lock file
-            Cargo.lock is gitignored - cargo manages it during builds
+            Cargo locking:
+              Cargo.lock is managed by cargo in the project root
+              Run 'cargo update' to update dependencies and lock file
+              Cargo.lock is gitignored - cargo manages it during builds
 
-          To test the flake build (from project root):
-            nix build
+            To test the flake build (from project root):
+              nix build
 
-          EOF
-        '';
-      in
-      {
-        devShells.default = pkgs.mkShell {
+            EOF
+          '';
+        in
+        {
+          default = pkgs.mkShell {
           # Tooling packages
           buildInputs = tooling;
 
@@ -101,6 +102,6 @@
           # Shell hook (separated for clarity)
           inherit shellHook;
         };
-      }
-    );
+        });
+    };
 }

@@ -44,34 +44,40 @@
 
     # Share nixpkgs with lib flake
     lib-flake.inputs.nixpkgs.follows = "nixpkgs";
+
+    # DevShells flake
+    devShells-flake.url = "path:./devShells";
+
+    # Share nixpkgs with devShells flake
+    devShells-flake.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, project-root, apps-flake, checks-flake, formatter-flake, packages-flake, lib-flake, ... }:
+  outputs = { self, nixpkgs, project-root, apps-flake, checks-flake, formatter-flake, packages-flake, lib-flake, devShells-flake, ... }:
     let
       # Use nixpkgs.lib directly instead of importing a specific system's pkgs
       lib = nixpkgs.lib;
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
-      forAllSystems = f: lib.genAttrs systems f;
       # Import nixpkgs for system-specific packages
       pkgsFor = system: import nixpkgs { inherit system; };
     in
     {
       # Lib output maps directly to lib subflake (not system-specific)
       lib = lib-flake.lib;
-      # Apps output: apps.${system} structure
-      # Note: subflakes use forAllSystems which creates ${system}.apps, so we need to access it correctly
-      apps = forAllSystems (system: apps-flake.${system}.apps);
-      # Checks output: checks.${system} structure
-      checks = forAllSystems (system: checks-flake.${system}.checks);
-      # Formatter output: formatter.${system} structure
-      formatter = forAllSystems (system: formatter-flake.${system}.formatter);
-      # Packages output: packages.${system} structure
-      # Also include checks as packages so they can be built with nix build .#checks.<name>
-      packages = forAllSystems (system:
+      # Apps output: direct re-export (Variant A - subflakes expose apps.${system} directly)
+      apps = apps-flake.apps;
+      # Checks output: direct re-export (Variant A)
+      checks = checks-flake.checks;
+      # Formatter output: direct re-export (Variant A)
+      formatter = formatter-flake.formatter;
+      # DevShells output: direct re-export (Variant A)
+      devShells = devShells-flake.devShells;
+      # Packages output: composed view that aggregates packages + checks + manifest + all
+      # This is the ONLY place where cross-space composition happens
+      packages = lib.genAttrs systems (system:
         let
           pkgs = pkgsFor system;
-          allPackages = packages-flake.${system}.packages;
-          allChecks = checks-flake.${system}.checks;
+          allPackages = packages-flake.packages.${system};
+          allChecks = checks-flake.checks.${system};
           # Helper function to wrap single-file outputs in directories
           # This ensures symlinkJoin can handle both files and directories
           wrapInDir = name: drv:
@@ -128,7 +134,7 @@
           all = all; # Named explicitly as well for clarity
         });
       # CI output: explicit CI entrypoint that builds everything + runs all checks
-      ci = forAllSystems (system: {
+      ci = lib.genAttrs systems (system: {
         all = self.packages.${system}.all or self.packages.${system}.default;
       });
     };
