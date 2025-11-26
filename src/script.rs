@@ -9,13 +9,13 @@ pub const BOOTSTRAP_FLAKE_PATH: &str = "/worktrees/io.github/bdelanghe/lima-devs
 /// This script validates the environment and launches the project's nix develop
 pub fn build_guest_script(ctx: &AppContext) -> String {
     // Note: We use {{ to escape { in the format string, and }} to escape }
-    // For bash ${1:-default}, we need ${{{{1:-default}}}} to get ${1:-default} in output
+    // For bash ${1:-default}, we need ${{1:-{}}} to get ${1:-default} in output
     format!(
         r#"
 set -euo pipefail
 
 # Get target directory (use provided path or current directory)
-TARGET_DIR="${{{{1:-{}}}}}" 
+TARGET_DIR="${{1:-{}}}" 
 TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
 
 echo "[lima-devshell] target directory: $TARGET_DIR"
