@@ -109,8 +109,8 @@ fi
     };
 
     // Add comment header
-    let yaml = serde_yaml::to_string(&config)
-        .context("failed to serialize Lima configuration to YAML")?;
+    let yaml =
+        serde_yaml::to_string(&config).context("failed to serialize Lima configuration to YAML")?;
     Ok(format!(
         "# Lima instance for {} development\n{}",
         instance.repo_name, yaml
