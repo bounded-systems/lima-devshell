@@ -39,9 +39,12 @@
           nix-fmt-check = pkgs.runCommand "nix-fmt-check"
             {
               nativeBuildInputs = with pkgs; [ nixpkgs-fmt findutils ];
+              # Include the checks flake source
+              checksSrc = self;
             } ''
             # Copy checks flake to build directory
-            cp -r ${toString ./.} ./checks-flake
+            cp -r ${self} ./checks-flake
+            chmod -R +w ./checks-flake
             cd checks-flake
             bash ${inputsDir}/nix-fmt-check.sh
             touch $out
@@ -51,9 +54,12 @@
           shell-scripts-check = pkgs.runCommand "shell-scripts-check"
             {
               nativeBuildInputs = with pkgs; [ findutils gnugrep ];
+              # Include the checks flake source
+              checksSrc = self;
             } ''
             # Copy checks flake to build directory
-            cp -r ${toString ./.} ./checks-flake
+            cp -r ${self} ./checks-flake
+            chmod -R +w ./checks-flake
             cd checks-flake
             bash ${inputsDir}/shell-scripts-check.sh
             touch $out
@@ -64,9 +70,12 @@
           no-cross-dir-deps = pkgs.runCommand "no-cross-dir-deps"
             {
               nativeBuildInputs = with pkgs; [ findutils gnugrep ];
+              # Include the checks flake source
+              checksSrc = self;
             } ''
             # Copy checks flake to build directory
-            cp -r ${toString ./.} ./checks-flake
+            cp -r ${self} ./checks-flake
+            chmod -R +w ./checks-flake
             cd checks-flake
             bash ${inputsDir}/no-cross-dir-deps-check.sh
             touch $out
