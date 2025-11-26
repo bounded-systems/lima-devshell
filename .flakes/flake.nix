@@ -42,9 +42,8 @@
     # Checks flake
     checks-flake.url = "path:./checks";
 
-    # Share nixpkgs, project-root, and crane with checks flake
+    # Share nixpkgs and crane with checks flake
     checks-flake.inputs.nixpkgs.follows = "nixpkgs";
-    checks-flake.inputs.project-root.follows = "project-root";
     checks-flake.inputs.crane.follows = "crane";
 
     # Formatter flake
