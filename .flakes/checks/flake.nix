@@ -43,9 +43,9 @@
               let
                 baseName = baseNameOf path;
               in
-                baseName == "flake.nix" ||
-                baseName == "inputs" ||
-                lib.hasSuffix ".nix" baseName;
+              baseName == "flake.nix" ||
+              baseName == "inputs" ||
+              lib.hasSuffix ".nix" baseName;
           };
         in
         {
