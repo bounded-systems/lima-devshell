@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lima-devshell.io/schemas/graph-policy-schema.json",
+  "title": "Graph Policy Schema",
+  "description": "JSON Schema for graph-policy.json files",
+  "type": "object",
+  "properties": {
+    "groups": {
+      "type": "object",
+      "patternProperties": {
+        ".*": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "immutable": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "defaultGroup": {
+      "type": "string"
+    }
+  }
+}
+

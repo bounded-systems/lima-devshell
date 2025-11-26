@@ -1,0 +1,41 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lima-devshell.io/schemas/graph-policy.json",
+  "title": "Flake Graph Refresh Policy",
+  "description": "Policy for which flake inputs can be updated and how",
+  "type": "object",
+  "properties": {
+    "groups": {
+      "type": "object",
+      "description": "Named groups of inputs that can be updated together",
+      "patternProperties": {
+        ".*": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of input names in this group"
+          }
+        }
+      },
+      "default": {
+        "toolchain": ["nixpkgs", "crane"],
+        "ci": []
+      }
+    },
+    "immutable": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Input names that should never be updated (internal path inputs)",
+      "default": ["project-root"]
+    },
+    "defaultGroup": {
+      "type": "string",
+      "description": "Default group to update when no group is specified",
+      "default": "toolchain"
+    }
+  }
+}
+
