@@ -65,31 +65,6 @@
             } // toolSubstitutions // extraSubstitutions));
           };
           
-          # Validate that all scripts in inputs/ are referenced
-          # This ensures no orphaned scripts and helps catch typos
-          _validateInputsUsage = let
-            inputsDir = project-root + "/.flakes/apps/inputs";
-            # Get all .sh files in inputs directory
-            allInputScripts = lib.attrNames (lib.filterAttrs 
-              (name: _: lib.hasSuffix ".sh" name)
-              (builtins.readDir inputsDir));
-            # Scripts that are explicitly referenced in this flake
-            referencedScripts = [
-              "impure-flake-prep.sh"
-              "impure-update-flakes.sh"
-              "impure-lock-flakes.sh"
-              "graph-refresh.sh"
-              "graph-show.sh"
-              "validate-flake-lock.sh"  # Referenced via VALIDATE_SCRIPT
-            ];
-            unused = lib.subtractLists referencedScripts allInputScripts;
-            missing = lib.subtractLists allInputScripts referencedScripts;
-          in
-            if unused != [] then
-              throw "Unused input scripts found: ${lib.concatStringsSep ", " unused}. Remove them or add them to referencedScripts."
-            else if missing != [] then
-              throw "Referenced scripts not found in inputs/: ${lib.concatStringsSep ", " missing}"
-            else true;
         in
         {
           # Pre-Nix preparation: impure operation to prepare inputs for deterministic builds
