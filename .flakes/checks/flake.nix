@@ -10,8 +10,9 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     # Project root path (git repo root) - non-flake path input
-    # Default to parent directory for standalone use, overridden by parent via follows
-    project-root.url = "path:..";
+    # From .flakes/checks/, need to go up two levels to reach project root
+    # Overridden by parent router via follows when used from router
+    project-root.url = "path:../..";
     project-root.flake = false;
     # Input scripts directory - non-flake path input
     inputs.url = "path:./inputs";
