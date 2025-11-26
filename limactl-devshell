@@ -1,5 +1,7 @@
 #!/bin/sh
 # <limactl-desc>Enter Lima dev environment from a valid Git worktree. Automatically manages Lima instances for Nix devshell development.</limactl-desc>
+# 
+# ⚠️  REQUIREMENT: Lima >= 2.0.0 (CLI plugins are not available in older versions)
 set -eu
 
 # Lima CLI plugin wrapper for lima-devshell
@@ -8,6 +10,20 @@ set -eu
 # Installation:
 #   ln -s /path/to/lima-devshell/limactl-devshell /usr/local/bin/limactl-devshell
 #   # or install via Home Manager (see README)
+
+# Check Lima version if limactl is available
+if command -v limactl >/dev/null 2>&1; then
+    LIMA_VERSION=$(limactl --version 2>&1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1 || echo "")
+    if [ -n "$LIMA_VERSION" ]; then
+        MAJOR_VERSION=$(echo "$LIMA_VERSION" | cut -d. -f1)
+        if [ "$MAJOR_VERSION" -lt 2 ]; then
+            echo "limactl-devshell: error: Lima version $LIMA_VERSION detected" >&2
+            echo "limactl-devshell: CLI plugins require Lima >= 2.0.0" >&2
+            echo "limactl-devshell: Please upgrade Lima or use 'lima-devshell' command directly" >&2
+            exit 1
+        fi
+    fi
+fi
 
 # Find the lima-devshell binary
 # Try multiple locations in order of preference:

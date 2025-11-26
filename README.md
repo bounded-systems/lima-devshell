@@ -379,6 +379,10 @@ For more details, see the [Lima MCP Tools Documentation](https://lima-vm.io/docs
 
 This project includes a Lima CLI plugin wrapper (`limactl-devshell`) that allows `lima-devshell` to be used as a native Lima plugin. This is the **recommended long-term approach** for better integration with Lima's ecosystem.
 
+⚠️ **Requirement**: CLI plugins require **Lima >= 2.0.0**. Check your version with `limactl --version`. If you're using an older version, you can:
+- Continue using `lima-devshell` directly (works with all Lima versions)
+- Upgrade Lima to 2.0.0+ to use the plugin system
+
 ### Plugin Features
 
 - **Automatic Discovery**: Appears in `limactl --help` under "Available Plugins"

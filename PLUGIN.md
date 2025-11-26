@@ -2,6 +2,8 @@
 
 This document outlines the plan to migrate `lima-devshell` to a native Lima CLI plugin.
 
+⚠️ **Important**: CLI plugins require **Lima >= 2.0.0**. If you're using an older version of Lima, you'll need to upgrade first.
+
 ## Current State
 
 - `lima-devshell` works as a standalone Rust binary
