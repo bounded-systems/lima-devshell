@@ -33,9 +33,9 @@
           # Project root from input
           projectRoot = toString project-root;
 
-          # Inputs directory path (relative to project root)
-          # project-root points to .flakes/ (from path:..), so we need apps/inputs
-          inputsDir = project-root + "/apps/inputs";
+          # Inputs directory path (relative to flake source)
+          # Use self to reference the flake's own source directory for builtins.readFile
+          inputsDir = "${self}/inputs";
 
           # Helper to get script path from filename
           scriptPath = scriptName: inputsDir + "/${scriptName}";
