@@ -8,13 +8,9 @@
     # Default to parent directory for standalone use, overridden by parent via follows
     project-root.url = "path:..";
     project-root.flake = false;
-    # Apps flake to re-export impure-update-flakes
-    apps.url = "path:../apps";
-    apps.inputs.nixpkgs.follows = "nixpkgs";
-    apps.inputs.project-root.follows = "project-root";
   };
 
-  outputs = { self, nixpkgs, crane, project-root, apps }:
+  outputs = { self, nixpkgs, crane, project-root }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       # Import nixpkgs for lib access
@@ -202,9 +198,6 @@
           # Default package
           default = lima-devshell;
         };
-
-        # Re-export apps from apps flake for convenience
-        apps = apps.apps.${system};
       }
     );
 }

@@ -8,53 +8,48 @@
     # Default to parent directory for standalone use, overridden by parent via follows
     project-root.url = "path:..";
     project-root.flake = false;
-    # Packages flake to reference test package
-    packages.url = "path:../packages";
-    packages.inputs.nixpkgs.follows = "nixpkgs";
-    packages.inputs.crane.follows = "crane";
-    packages.inputs.project-root.follows = "project-root";
   };
 
-  outputs = { self, nixpkgs, crane, project-root, packages }:
+  outputs = { self, nixpkgs, crane, project-root }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       # Import nixpkgs for lib access
       pkgsFor = system: import nixpkgs { inherit system; };
       lib = (pkgsFor "x86_64-linux").lib;
-      forAllSystems = f: lib.genAttrs systems f;
+      perSystem = f: lib.genAttrs systems f;
     in
-    forAllSystems (system:
-      let
-        pkgs = import nixpkgs {
-          inherit system;
-          config.allowUnfree = true;
-        };
-        # Project root from input
-        projectRoot = toString project-root;
+    {
+      checks = perSystem (system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+          # Project root from input
+          projectRoot = toString project-root;
 
-        # Initialize crane for clippy check
-        craneLib = crane.mkLib pkgs;
+          # Initialize crane for clippy check
+          craneLib = crane.mkLib pkgs;
 
-        # Filter source files (excludes vendor, target, etc.)
-        src = craneLib.cleanCargoSource (craneLib.path projectRoot);
+          # Filter source files (excludes vendor, target, etc.)
+          src = craneLib.cleanCargoSource (craneLib.path projectRoot);
 
-        # Common args for crane builds
-        commonArgs = {
-          inherit src;
-          pname = "lima-devshell";
-          version = "0.1.0";
-          buildInputs = with pkgs; [
-            libgit2
-            openssl
-            pkg-config
-          ];
-        };
+          # Common args for crane builds
+          commonArgs = {
+            inherit src;
+            pname = "lima-devshell";
+            version = "0.1.0";
+            buildInputs = with pkgs; [
+              libgit2
+              openssl
+              pkg-config
+            ];
+          };
 
-        # Build cargo artifacts first (dependencies)
-        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-      in
-      {
-        checks = {
+          # Build cargo artifacts first (dependencies)
+          cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+        in
+        {
           # Check Nix code formatting
           nix-fmt-check = pkgs.runCommand "nix-fmt-check"
             {
@@ -84,9 +79,10 @@
           });
 
           # Run Rust unit tests
-          # Uses the tests package from .flakes/packages for consistency
-          rust-tests = packages.${system}.packages.tests;
-        };
-      }
-    );
+          # Build tests directly using crane (no cross-dir dependency on packages flake)
+          rust-tests = craneLib.cargoTest (commonArgs // {
+            inherit cargoArtifacts;
+          });
+        });
+    };
 }

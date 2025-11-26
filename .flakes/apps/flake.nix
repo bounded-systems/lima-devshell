@@ -15,22 +15,22 @@
       # Import nixpkgs for lib access
       pkgsFor = system: import nixpkgs { inherit system; };
       lib = (pkgsFor "x86_64-linux").lib;
-      forAllSystems = f: lib.genAttrs systems f;
+      perSystem = f: lib.genAttrs systems f;
     in
-    forAllSystems (system:
-      let
-        pkgs = import nixpkgs {
-          inherit system;
-          config.allowUnfree = true;
-        };
-        # All tools come from nixpkgs input (deterministic)
-        cargo = pkgs.cargo;
-        findutils = pkgs.findutils;
-        # Project root from input
-        projectRoot = toString project-root;
-      in
-      {
-        apps = {
+    {
+      apps = perSystem (system:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+          };
+          # All tools come from nixpkgs input (deterministic)
+          cargo = pkgs.cargo;
+          findutils = pkgs.findutils;
+          # Project root from input
+          projectRoot = toString project-root;
+        in
+        {
           # Pre-Nix preparation: impure operation to prepare inputs for deterministic builds
           # Nix's buildRustPackage uses Cargo.lock + cargoHash to download and verify dependencies
           # No vendoring needed - Nix handles dependency fetching and caching
@@ -522,7 +522,6 @@
               echo "✓ All flakes locked successfully"
             '');
           };
-        };
-      }
-    );
+        });
+    };
 }
