@@ -51,6 +51,7 @@
 
             # Essential development tools
             git
+            direnv # Environment variable management (reads .lima-devshell files)
           ];
 
           # Shell hook (read from inputs/shell-hook.sh - static file only)
