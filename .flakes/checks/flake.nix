@@ -85,7 +85,7 @@
 
           # Run Rust unit tests
           # Uses the tests package from .flakes/packages for consistency
-          rust-tests = packages.packages.${system}.tests;
+          rust-tests = packages.packages.${system}.packages.tests;
         };
       }
     );

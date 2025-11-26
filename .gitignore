@@ -20,3 +20,6 @@ target/
 .cargo/
 vendor/
 
+# Lima devshell instance name file
+.lima-devshell
+

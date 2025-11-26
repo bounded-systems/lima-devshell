@@ -315,6 +315,15 @@ fn cleanup_old_dev_instance() -> Result<()> {
 
 /// Ensure Lima instance exists and is running
 pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &Path) -> Result<()> {
+    // Write instance name to .lima-devshell file for direnv to read
+    let lima_devshell_path = worktree_dir.join(".lima-devshell");
+    std::fs::write(&lima_devshell_path, &instance.name)
+        .context("failed to write .lima-devshell file")?;
+    println!(
+        "lima-devshell: wrote instance name to {}",
+        lima_devshell_path.display()
+    );
+
     let lima_home = get_lima_home()?;
     let lima_instance_dir = lima_home.join(&instance.name);
 
