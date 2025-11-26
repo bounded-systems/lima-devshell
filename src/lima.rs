@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::thread;
@@ -226,13 +225,13 @@ fn start_lima_instance_with_yaml(instance_name: &str, config_path: &Path) -> Res
 /// Stop a Lima instance gracefully
 /// Uses --tty=false (via --yes) to ensure non-interactive operation.
 fn stop_lima_instance(instance_name: &str) -> Result<()> {
-    let status = Command::new("limactl")
-        .args(["stop", "--yes", instance_name])
-        .status()
-        .context("failed to execute limactl stop")?;
-
     // Don't fail if stop fails - instance might already be stopped
     // This is a best-effort cleanup operation
+    let _ = Command::new("limactl")
+        .args(["stop", "--yes", instance_name])
+        .status()
+        .context("failed to execute limactl stop");
+
     Ok(())
 }
 
@@ -245,21 +244,6 @@ fn delete_lima_instance(instance_name: &str) -> Result<()> {
 
     if !status.success() {
         anyhow::bail!("failed to delete Lima instance");
-    }
-
-    Ok(())
-}
-
-/// Start a Lima instance by name (for instances that already exist)
-/// Uses --tty=false (via --yes) to ensure non-interactive operation.
-fn start_lima_instance(instance_name: &str) -> Result<()> {
-    let status = Command::new("limactl")
-        .args(["start", "--yes", instance_name])
-        .status()
-        .context("failed to execute limactl start")?;
-
-    if !status.success() {
-        anyhow::bail!("failed to start Lima instance");
     }
 
     Ok(())
