@@ -1,0 +1,174 @@
+#!/usr/bin/env bash
+# lima-devshell: Guarded command to enter lima dev environment from a valid Git worktree
+# This validates the current directory is a Git worktree under ~/.local/state/git/worktrees,
+# maps the host path to the guest path (/worktrees/...), and runs nix develop on the project flake.
+
+set -euo pipefail
+
+# Where your bare/worktrees live on the host
+HOST_WORKTREE_ROOT="${XDG_STATE_HOME:-$HOME/.local/state}/git/worktrees"
+GUEST_WORKTREE_ROOT="/worktrees"
+
+# Guard 1: Require that we are inside a Git work tree (host-side)
+if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  echo "lima-devshell: error: current directory is not inside a Git work tree." >&2
+  exit 1
+fi
+
+# Guard 2: Require that the current directory is under the host worktree root
+CWD_HOST="$(pwd)"
+case "$CWD_HOST" in
+  "$HOST_WORKTREE_ROOT"/*)
+    REL_PATH="${CWD_HOST#$HOST_WORKTREE_ROOT/}"
+    ;;
+  *)
+    echo "lima-devshell: error: current directory is not under" >&2
+    echo "  $HOST_WORKTREE_ROOT" >&2
+    echo "Cannot map host path to Lima /worktrees layout." >&2
+    exit 1
+    ;;
+esac
+
+# Compute the equivalent path inside Lima
+CWD_GUEST="$GUEST_WORKTREE_ROOT/$REL_PATH"
+
+# Extract repo name and worktree name from path to determine Lima instance name
+# Path format: io.github/owner/repo/worktree-name
+IFS='/' read -ra PATH_SEGMENTS <<< "$REL_PATH"
+if [ ${#PATH_SEGMENTS[@]} -ge 4 ]; then
+  # Use owner-repo-worktree format (e.g., pushd-percy-COMMERCE-4873)
+  REPO_OWNER="${PATH_SEGMENTS[1]}"
+  REPO_NAME="${PATH_SEGMENTS[2]}"
+  WORKTREE_NAME="${PATH_SEGMENTS[3]}"
+  # Convert worktree name to lowercase for consistency
+  WORKTREE_NAME_LOWER="$(echo "$WORKTREE_NAME" | tr '[:upper:]' '[:lower:]')"
+  LIMA_INSTANCE="${REPO_OWNER}-${REPO_NAME}-${WORKTREE_NAME_LOWER}"
+elif [ ${#PATH_SEGMENTS[@]} -eq 3 ]; then
+  # Fallback: owner-repo format if no worktree name
+  REPO_OWNER="${PATH_SEGMENTS[1]}"
+  REPO_NAME="${PATH_SEGMENTS[2]}"
+  LIMA_INSTANCE="${REPO_OWNER}-${REPO_NAME}"
+elif [ ${#PATH_SEGMENTS[@]} -eq 2 ]; then
+  # Fallback: just use repo name if structure is simpler
+  REPO_NAME="${PATH_SEGMENTS[1]}"
+  LIMA_INSTANCE="$REPO_NAME"
+else
+  echo "lima-devshell: error: unexpected worktree path structure: $REL_PATH" >&2
+  exit 1
+fi
+
+# Try to get bare repo path from git (more reliable)
+BARE_REPO_PATH=""
+if git rev-parse --git-dir >/dev/null 2>&1; then
+  GIT_DIR="$(git rev-parse --git-dir)"
+  # If it's a worktree, git-dir points to the worktree's .git file
+  if [ -f "$GIT_DIR" ]; then
+    # Read the gitdir from the worktree .git file
+    GITDIR_CONTENT="$(cat "$GIT_DIR" | sed 's/^gitdir: //')"
+    # Extract the bare repo path (parent of worktrees directory)
+    BARE_REPO_PATH="$(dirname "$(dirname "$GITDIR_CONTENT")")"
+  fi
+fi
+
+# Fallback: construct expected bare repo path
+if [ -z "$BARE_REPO_PATH" ] || [ ! -d "$BARE_REPO_PATH" ]; then
+  BARE_REPO_PATH="$HOME/.local/share/git/bare/io.github/${REPO_OWNER}/${REPO_NAME}.git"
+fi
+
+# Extract bare repo mount point name
+BARE_REPO_MOUNT_NAME="$(basename "$BARE_REPO_PATH")"
+
+echo "lima-devshell: host:  $CWD_HOST"
+echo "lima-devshell: guest: $CWD_GUEST"
+echo "lima-devshell: instance: $LIMA_INSTANCE"
+echo "lima-devshell: bare repo: $BARE_REPO_PATH"
+
+# Ensure Lima instance exists and is configured
+LIMA_INSTANCE_DIR="$HOME/.lima/$LIMA_INSTANCE"
+if [ ! -d "$LIMA_INSTANCE_DIR" ]; then
+  echo "lima-devshell: creating Lima instance '$LIMA_INSTANCE'..."
+  # Create instance config directory
+  mkdir -p "$LIMA_INSTANCE_DIR"
+  # Generate Lima config for this instance
+  cat > "$LIMA_INSTANCE_DIR/lima.yaml" <<EOF
+# Lima instance for $REPO_NAME development
+vmType: "vz"
+arch: "aarch64"
+
+images:
+  - location: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64.img"
+    arch: "aarch64"
+
+mounts:
+  # Mount this specific worktree
+  - location: "$CWD_HOST"
+    mountPoint: "$CWD_GUEST"
+    writable: true
+  # Mount the bare repo (use detected or constructed path)
+  - location: "$BARE_REPO_PATH"
+    mountPoint: "/git/bare/$BARE_REPO_MOUNT_NAME"
+    writable: true
+
+memory: "6GiB"
+cpus: 4
+disk: "80GiB"
+
+ssh:
+  user: "dev"
+  localPort: 60022
+  loadDotSSHPubKeys: true
+
+env:
+  LIMA_WORKDIR_DISABLED: "1"
+
+# Provisioning step to create the dev user
+provision:
+  - mode: system
+    script: |
+      #!/bin/sh
+      # Create user if not present
+      if ! id dev >/dev/null 2>&1; then
+        useradd -m -s /bin/bash dev
+        passwd -d dev
+        usermod -aG sudo dev
+      fi
+EOF
+  echo "lima-devshell: starting Lima instance '$LIMA_INSTANCE'..."
+  limactl start "$LIMA_INSTANCE_DIR/lima.yaml" || {
+    echo "lima-devshell: error: failed to start Lima instance" >&2
+    exit 1
+  }
+else
+  # Instance exists, check if it's running
+  if ! limactl list | grep -q "^$LIMA_INSTANCE.*Running"; then
+    echo "lima-devshell: starting existing Lima instance '$LIMA_INSTANCE'..."
+    limactl start "$LIMA_INSTANCE" || {
+      echo "lima-devshell: error: failed to start Lima instance" >&2
+      exit 1
+    }
+  fi
+fi
+
+# Enter Lima, cd to the mapped path, and start Nix devshell for the project
+# Note: Lima initialization may show harmless errors about macOS paths - these can be safely ignored
+# Bootstrap flake path inside Lima (mounted from host worktree)
+BOOTSTRAP_FLAKE_PATH="/worktrees/io.github/bdelanghe/lima-devshell"
+
+limactl shell "$LIMA_INSTANCE" -- bash -lc "
+  set -euo pipefail
+  cd '$CWD_GUEST'
+  echo \"[lima-devshell] now in: \$(pwd)\"
+  # First enter bootstrap shell, then project shell
+  # This form returns an interactive shell from the inner nix develop
+  if [ -d '$BOOTSTRAP_FLAKE_PATH' ]; then
+    nix develop '$BOOTSTRAP_FLAKE_PATH' --command bash -lc 'nix develop'
+  else
+    # Fallback: try GitHub URL or direct nix develop
+    echo \"[lima-devshell] warning: bootstrap flake not found at $BOOTSTRAP_FLAKE_PATH\" >&2
+    echo \"[lima-devshell] trying GitHub URL...\" >&2
+    nix develop github:bdelanghe/lima-devshell --command bash -lc 'nix develop' || {
+      echo \"[lima-devshell] falling back to direct nix develop\" >&2
+      nix develop
+    }
+  fi
+"
