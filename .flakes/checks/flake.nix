@@ -1,5 +1,5 @@
 # This flake owns only the `checks` output space.
-# It may depend on: nixpkgs, project-root, lib-flake, meta-flake.
+# It may depend on: nixpkgs, crane, project-root, lib-flake, meta-flake.
 # It must not import from other .flakes/* directories.
 # All cross-space composition happens in .flakes/flake.nix (the router).
 #
@@ -9,6 +9,7 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    crane.url = "github:ipetkov/crane";
     # Project root path (git repo root) - non-flake path input
     # From .flakes/checks/, need to go up two levels to reach project root
     # Overridden by parent router via follows when used from router
@@ -19,7 +20,7 @@
     inputs.flake = false;
   };
 
-  outputs = { self, nixpkgs, project-root, inputs }:
+  outputs = { self, nixpkgs, crane, project-root, inputs }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       # Import nixpkgs for lib access
@@ -38,6 +39,27 @@
           projectRoot = toString project-root;
           # Inputs directory path
           inputsDir = toString inputs;
+
+          # Initialize crane for Rust checks (vendors dependencies for offline builds)
+          craneLib = crane.mkLib pkgs;
+
+          # Filter source files (excludes vendor, target, etc.)
+          src = craneLib.cleanCargoSource (craneLib.path projectRoot);
+
+          # Common args for crane builds
+          commonArgs = {
+            inherit src;
+            pname = "lima-devshell";
+            version = "0.1.0";
+            buildInputs = with pkgs; [
+              libgit2
+              openssl
+              pkg-config
+            ];
+          };
+
+          # Build cargo artifacts first (dependencies) - this vendors deps for offline use
+          cargoArtifacts = craneLib.buildDepsOnly commonArgs;
         in
         {
           # Check Nix code formatting
@@ -60,25 +82,16 @@
             touch $out
           '';
 
-          # Run clippy check
-          clippy-check = pkgs.runCommand "clippy-check"
-            {
-              nativeBuildInputs = with pkgs; [ cargo clippy ];
-            } ''
-            export PROJECT_ROOT="${projectRoot}"
-            bash ${inputsDir}/clippy-check.sh
-            touch $out
-          '';
+          # Run clippy using crane (vendors dependencies for offline builds)
+          clippy-check = craneLib.cargoClippy (commonArgs // {
+            inherit cargoArtifacts;
+            cargoClippyExtraArgs = "--all-targets -- -D warnings";
+          });
 
-          # Run Rust unit tests
-          rust-tests = pkgs.runCommand "rust-tests"
-            {
-              nativeBuildInputs = with pkgs; [ cargo ];
-            } ''
-            export PROJECT_ROOT="${projectRoot}"
-            bash ${inputsDir}/rust-tests.sh
-            touch $out
-          '';
+          # Run Rust unit tests using crane (vendors dependencies for offline builds)
+          rust-tests = craneLib.cargoTest (commonArgs // {
+            inherit cargoArtifacts;
+          });
 
           # Graph structure check: validate flake.lock graph and ensure isolation
           # Uses schema validation and checks that all .flakes/* nodes are internal path nodes
