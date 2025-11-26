@@ -83,12 +83,20 @@
           '';
 
           # Run clippy using crane (vendors dependencies for offline builds)
+          # Note: Uses crane directly instead of scripts because:
+          # - Crane handles dependency vendoring for sandboxed Nix builds
+          # - This is a Nix-level operation that requires crane's buildDepsOnly
+          # - Scripts can't easily replicate crane's dependency management
           clippy-check = craneLib.cargoClippy (commonArgs // {
             inherit cargoArtifacts;
             cargoClippyExtraArgs = "--all-targets -- -D warnings";
           });
 
           # Run Rust unit tests using crane (vendors dependencies for offline builds)
+          # Note: Uses crane directly instead of scripts because:
+          # - Crane handles dependency vendoring for sandboxed Nix builds
+          # - This is a Nix-level operation that requires crane's buildDepsOnly
+          # - Scripts can't easily replicate crane's dependency management
           rust-tests = craneLib.cargoTest (commonArgs // {
             inherit cargoArtifacts;
           });

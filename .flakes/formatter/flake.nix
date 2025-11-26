@@ -36,14 +36,8 @@
             text = builtins.readFile script;
           };
         in
-        {
-          # Default formatter: formats both Nix and Rust
-          default = mkFormatter "format" formatScript;
-          # Format only Nix files
-          nix = mkFormatter "format-nix" ./inputs/format-nix.sh;
-          # Format only Rust files
-          rust = mkFormatter "format-rust" ./inputs/format-rust.sh;
-        });
+        # Default formatter: formats both Nix and Rust
+        mkFormatter "format" formatScript);
     };
 }
 
