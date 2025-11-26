@@ -66,7 +66,7 @@
       formatter = forAllSystems (system: formatter-flake.${system}.formatter);
       # Packages output: packages.${system} structure
       # Also include checks as packages so they can be built with nix build .#checks.<name>
-      packages = forAllSystems (system: 
+      packages = forAllSystems (system:
         let
           pkgs = pkgsFor system;
           allPackages = packages-flake.${system}.packages;
@@ -91,7 +91,6 @@
           checks = allChecks;
           # Override default to build everything
           default = all;
-        }
-      );
+        });
     };
 }
