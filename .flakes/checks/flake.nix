@@ -3,7 +3,7 @@
 # It must not import from other .flakes/* directories.
 # All cross-space composition happens in .flakes/flake.nix (the router).
 #
-# Input metadata and documentation is stored in inputs/ directory.
+# Input assets (scripts) are stored in inputs/ directory.
 {
   description = "Validation checks module";
 
