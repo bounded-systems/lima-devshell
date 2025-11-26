@@ -1,3 +1,7 @@
+# This flake owns only the `lib` output space.
+# It may depend on: nixpkgs (for lib utilities).
+# It must not import from other .flakes/* directories.
+# This is a pure helper library with no project-space knowledge.
 {
   description = "Pure helper functions and utilities";
 

@@ -1,3 +1,7 @@
+# This flake owns only the `overlays` output space.
+# It may depend on: nixpkgs, lib-flake, meta-flake.
+# It must not import from other .flakes/* directories.
+# All cross-space composition happens in .flakes/flake.nix (the router).
 {
   description = "Nixpkgs overlays";
 

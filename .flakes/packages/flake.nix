@@ -1,3 +1,7 @@
+# This flake owns only the `packages` output space.
+# It may depend on: nixpkgs, crane, project-root, lib-flake, meta-flake.
+# It must not import from other .flakes/* directories.
+# All cross-space composition happens in .flakes/flake.nix (the router).
 {
   description = "Build artifacts and binaries";
 

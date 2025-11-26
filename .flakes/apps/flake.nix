@@ -1,3 +1,7 @@
+# This flake owns only the `apps` output space.
+# It may depend on: nixpkgs, project-root, lib-flake, meta-flake.
+# It must not import from other .flakes/* directories.
+# All cross-space composition happens in .flakes/flake.nix (the router).
 {
   description = "Launchable programs module - deterministic tool wrappers";
 

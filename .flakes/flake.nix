@@ -1,3 +1,8 @@
+# This is the sub-router flake that composes all subflakes in .flakes/
+# It is the ONLY place where cross-space composition is allowed.
+# Each subflake (apps, checks, packages, etc.) is isolated and must not
+# import from other subflakes. This router imports all subflakes and
+# composes their outputs, including cross-space logic like packages + checks.
 {
   description = "Dev tooling flake";
 
