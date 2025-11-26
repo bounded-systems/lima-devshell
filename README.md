@@ -131,6 +131,61 @@ Or if using a local path:
 home-manager switch --flake /path/to/lima-devshell#bobby@macos
 ```
 
+## Lima Templates
+
+This project includes a custom Lima template (`lima-devshell-template.yaml`) optimized for Nix devshell development. The `lima-devshell` tool dynamically generates instance-specific YAML configurations based on this template.
+
+### Using the Custom Template
+
+The template can be used directly with `limactl`:
+
+```bash
+# Create an instance from the template
+limactl create --name=my-dev lima-devshell-template.yaml
+
+# Start the instance
+limactl start my-dev
+```
+
+However, the `lima-devshell` command automatically generates and uses customized configurations, so manual template usage is typically not needed.
+
+### Exploring Existing Lima Templates
+
+Lima provides many pre-built templates for different distributions and use cases. You can explore them:
+
+1. **View available templates**: See the [Lima Templates Documentation](https://lima-vm.io/docs/templates/)
+
+2. **Copy an existing template locally**:
+   ```bash
+   # Copy the default template
+   limactl template copy default /tmp/default-template.yaml
+   
+   # Copy a specific template (e.g., fedora, docker, k8s)
+   limactl template copy template://fedora /tmp/fedora-template.yaml
+   ```
+
+3. **Use a template directly**:
+   ```bash
+   # Create instance from built-in template
+   limactl start template://fedora
+   limactl start template://docker
+   limactl start template://k8s
+   ```
+
+4. **Validate a template**:
+   ```bash
+   limactl template validate lima-devshell-template.yaml
+   ```
+
+### Template Customization
+
+The `lima-devshell-template.yaml` file serves as the base configuration. The Rust code in `src/lima.rs` customizes it per instance by:
+- Adding dynamic mounts for worktrees and bare repos
+- Setting instance-specific paths
+- Configuring resource allocation (CPU, memory, disk)
+
+To modify the base template, edit `lima-devshell-template.yaml` and update the constants in `src/lima.rs` accordingly.
+
 ## Repository Structure
 
 - **Bare repo**: `~/.local/share/git/bare/io.github/bdelanghe/lima-devshell.git/`

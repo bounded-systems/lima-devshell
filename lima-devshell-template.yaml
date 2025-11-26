@@ -1,0 +1,62 @@
+# Lima template for lima-devshell
+# This template provides a base configuration for Nix devshell development environments
+# 
+# Usage:
+#   limactl create --name=my-instance lima-devshell-template.yaml
+#   limactl start my-instance
+#
+# Or use with lima-devshell tool which will customize mounts dynamically
+
+# VM type: "vz" for macOS 13.5+, "qemu" for others
+vmType: vz
+
+# Architecture: "aarch64" for Apple Silicon, "x86_64" for Intel
+arch: aarch64
+
+# Ubuntu 24.04 LTS cloud image
+images:
+  - location: https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64.img
+    arch: aarch64
+
+# Resource allocation
+cpus: 4
+memory: 6GiB
+disk: 80GiB
+
+# Mounts will be added dynamically by lima-devshell based on worktree paths
+# Example mounts (customized per instance):
+# mounts:
+#   - location: /path/to/worktree
+#     mountPoint: /worktrees/path/to/worktree
+#     writable: true
+#   - location: /path/to/bare/repo
+#     mountPoint: /git/bare/repo
+#     writable: true
+mounts: []
+
+# SSH configuration
+ssh:
+  localPort: 0  # Auto-assign port
+  loadDotSSHPubKeys: true
+
+# Environment variables
+env:
+  LIMA_WORKDIR_DISABLED: "1"  # Disable Lima's default workdir mount
+
+# Provision script: Create dev user for development
+provision:
+  - mode: system
+    script: |
+      #!/bin/sh
+      # Create dev user if not present
+      if ! id dev >/dev/null 2>&1; then
+        useradd -m -s /bin/bash dev
+        passwd -d dev  # No password required
+        usermod -aG sudo dev
+      fi
+
+# Guest agent for better integration
+guestAgent:
+  enabled: true
+  logPath: /var/log/lima-guest-agent.log
+
