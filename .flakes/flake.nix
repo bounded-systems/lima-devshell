@@ -120,11 +120,9 @@
             paths = lib.attrValues wrappedPackages ++ lib.attrValues wrappedChecks ++ [ manifest ];
           };
         in
-        # Merge packages and checks, prefixing checks with "checks." so they're accessible as .#checks.<name>
-        allPackages
-        // (lib.mapAttrs' (name: value: lib.nameValuePair "checks.${name}" value) allChecks)
-        // {
-          # Override default to build everything
+        # Override default to build everything
+          # Note: checks are available via .#checks.<name> from the checks output, not packages
+        allPackages // {
           default = all;
         });
     };
