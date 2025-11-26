@@ -1,5 +1,5 @@
 # This flake owns only the `checks` output space.
-# It may depend on: nixpkgs, crane, project-root, lib-flake, meta-flake.
+# It may depend on: nixpkgs, project-root, lib-flake, meta-flake.
 # It must not import from other .flakes/* directories.
 # All cross-space composition happens in .flakes/flake.nix (the router).
 #
@@ -9,7 +9,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    crane.url = "github:ipetkov/crane";
     # Project root path (git repo root) - non-flake path input
     # Default to parent directory for standalone use, overridden by parent via follows
     project-root.url = "path:..";
@@ -19,7 +18,7 @@
     inputs.flake = false;
   };
 
-  outputs = { self, nixpkgs, crane, project-root, inputs }:
+  outputs = { self, nixpkgs, project-root, inputs }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       # Import nixpkgs for lib access
@@ -36,27 +35,6 @@
           };
           # Project root from input
           projectRoot = toString project-root;
-
-          # Initialize crane for clippy check
-          craneLib = crane.mkLib pkgs;
-
-          # Filter source files (excludes vendor, target, etc.)
-          src = craneLib.cleanCargoSource (craneLib.path projectRoot);
-
-          # Common args for crane builds
-          commonArgs = {
-            inherit src;
-            pname = "lima-devshell";
-            version = "0.1.0";
-            buildInputs = with pkgs; [
-              libgit2
-              openssl
-              pkg-config
-            ];
-          };
-
-          # Build cargo artifacts first (dependencies)
-          cargoArtifacts = craneLib.buildDepsOnly commonArgs;
         in
         {
           # Check Nix code formatting
@@ -72,24 +50,29 @@
           # Check Rust code formatting
           rust-fmt-check = pkgs.runCommand "rust-fmt-check"
             {
-              nativeBuildInputs = with pkgs; [ cargo rustfmt ];
             } ''
             export PROJECT_ROOT="${projectRoot}"
             bash ${inputs}/rust-fmt-check.sh
             touch $out
           '';
 
-          # Run clippy using crane (fetches dependencies from crates.io via Cargo.lock)
-          clippy-check = craneLib.cargoClippy (commonArgs // {
-            inherit cargoArtifacts;
-            cargoClippyExtraArgs = "--all-targets -- -D warnings";
-          });
+          # Run clippy check (requires Rust toolchain in PATH)
+          clippy-check = pkgs.runCommand "clippy-check"
+            {
+            } ''
+            export PROJECT_ROOT="${projectRoot}"
+            bash ${inputs}/clippy-check.sh
+            touch $out
+          '';
 
-          # Run Rust unit tests
-          # Build tests directly using crane (no cross-dir dependency on packages flake)
-          rust-tests = craneLib.cargoTest (commonArgs // {
-            inherit cargoArtifacts;
-          });
+          # Run Rust unit tests (requires Rust toolchain in PATH)
+          rust-tests = pkgs.runCommand "rust-tests"
+            {
+            } ''
+            export PROJECT_ROOT="${projectRoot}"
+            bash ${inputs}/rust-tests.sh
+            touch $out
+          '';
 
           # Graph structure check: validate flake.lock graph and ensure isolation
           # Uses schema validation and checks that all .flakes/* nodes are internal path nodes
