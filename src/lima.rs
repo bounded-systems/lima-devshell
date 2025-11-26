@@ -875,7 +875,6 @@ mod tests {
         let instance = create_test_instance();
         let yaml = generate_lima_yaml(&instance).expect("should generate YAML");
         let vm_type = detect_vm_type();
-        let mount_type = detect_mount_type(vm_type);
         let os = std::env::consts::OS;
 
         let parsed: LimaConfig = serde_yaml::from_str(&yaml).expect("valid YAML");
