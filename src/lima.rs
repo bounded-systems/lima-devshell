@@ -183,7 +183,6 @@ fn generate_lima_yaml_impl(instance: &InstanceModel) -> Result<String> {
         // SSH configuration: localPort 0 means auto-assign
         // No explicit network config = default user-mode network (host-only/localhost)
         // This is perfect for Nix devshells: connect via limactl shell or 127.0.0.1
-        // Port forwarding is explicitly set to empty (see port_forwards below)
         ssh: SshConfig {
             local_port: 0,
             load_dot_ssh_pub_keys: true,
@@ -217,9 +216,12 @@ fi
         } else {
             None
         },
-        // Explicitly set empty port forwards for Nix devshells
-        // All access is via limactl shell (SSH) on localhost - no port forwarding needed
-        // This makes the configuration explicit rather than relying on defaults
+        // Port forwarding: explicitly empty (no custom port forward rules)
+        // Lima's default gRPC port forwarder automatically forwards localhost ports:
+        //   - Services on 127.0.0.1:PORT in the VM → accessible on localhost:PORT on host
+        //   - Works for TCP and UDP (gRPC forwarder supports both)
+        //   - No explicit rules needed for standard devshell workflows
+        // This is the correct default for Nix devshells - services "just work" on localhost
         port_forwards: Vec::new(),
     };
 
