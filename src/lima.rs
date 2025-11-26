@@ -1,9 +1,9 @@
 use crate::app::{AppContext, InstanceModel};
 use crate::script::build_guest_script;
 use anyhow::{Context as AnyhowContext, Result};
-use std::collections::hash_map::DefaultHasher;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::env;
-use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::thread;
@@ -17,80 +17,109 @@ pub const UBUNTU_IMAGE_URL: &str =
 pub const MEMORY: &str = "6GiB";
 pub const CPUS: u32 = 4;
 pub const DISK: &str = "80GiB";
-const SSH_PORT_BASE: u16 = 60022;
 
-/// Compute SSH port from instance name hash to avoid collisions
-pub fn compute_ssh_port(instance_name: &str) -> u16 {
-    let mut hasher = DefaultHasher::new();
-    instance_name.hash(&mut hasher);
-    let hash = hasher.finish();
-    SSH_PORT_BASE + (hash % 1000) as u16
+#[derive(Debug, Serialize, Deserialize)]
+struct Image {
+    location: String,
+    arch: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Mount {
+    location: String,
+    #[serde(rename = "mountPoint")]
+    mount_point: String,
+    writable: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct SshConfig {
+    #[serde(rename = "localPort")]
+    local_port: u16,
+    #[serde(rename = "loadDotSSHPubKeys")]
+    load_dot_ssh_pub_keys: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct ProvisionStep {
+    mode: String,
+    script: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct LimaConfig {
+    #[serde(rename = "vmType")]
+    vm_type: String,
+    arch: String,
+    images: Vec<Image>,
+    mounts: Vec<Mount>,
+    memory: String,
+    cpus: u32,
+    disk: String,
+    ssh: SshConfig,
+    env: HashMap<String, String>,
+    provision: Vec<ProvisionStep>,
 }
 
 /// Generate Lima YAML configuration from instance model
-fn generate_lima_yaml(instance: &InstanceModel) -> String {
-    let ssh_port = compute_ssh_port(&instance.name);
-    format!(
-        r#"# Lima instance for {} development
-vmType: "{}"
-arch: "{}"
+fn generate_lima_yaml(instance: &InstanceModel) -> Result<String> {
+    let config = LimaConfig {
+        vm_type: VM_TYPE.to_string(),
+        arch: ARCH.to_string(),
+        images: vec![Image {
+            location: UBUNTU_IMAGE_URL.to_string(),
+            arch: ARCH.to_string(),
+        }],
+        mounts: vec![
+            Mount {
+                location: instance.worktree_mount_host.display().to_string(),
+                mount_point: instance.worktree_mount_guest.clone(),
+                writable: true,
+            },
+            Mount {
+                location: instance.bare_repo_mount_host.display().to_string(),
+                mount_point: instance.bare_repo_mount_guest.clone(),
+                writable: true,
+            },
+        ],
+        memory: MEMORY.to_string(),
+        cpus: CPUS,
+        disk: DISK.to_string(),
+        ssh: SshConfig {
+            local_port: 0,
+            load_dot_ssh_pub_keys: true,
+        },
+        env: {
+            let mut env = HashMap::new();
+            env.insert("LIMA_WORKDIR_DISABLED".to_string(), "1".to_string());
+            env
+        },
+        provision: vec![ProvisionStep {
+            mode: "system".to_string(),
+            script: r#"#!/bin/sh
+# Create user if not present
+if ! id dev >/dev/null 2>&1; then
+  useradd -m -s /bin/bash dev
+  passwd -d dev
+  usermod -aG sudo dev
+fi
+"#
+            .to_string(),
+        }],
+    };
 
-images:
-  - location: "{}"
-    arch: "{}"
-
-mounts:
-  # Mount this specific worktree
-  - location: "{}"
-    mountPoint: "{}"
-    writable: true
-  # Mount the bare repo
-  - location: "{}"
-    mountPoint: "{}"
-    writable: true
-
-memory: "{}"
-cpus: {}
-disk: "{}"
-
-ssh:
-  localPort: {}
-  loadDotSSHPubKeys: true
-
-env:
-  LIMA_WORKDIR_DISABLED: "1"
-
-# Provisioning step to create the dev user
-provision:
-  - mode: system
-    script: |
-      #!/bin/sh
-      # Create user if not present
-      if ! id dev >/dev/null 2>&1; then
-        useradd -m -s /bin/bash dev
-        passwd -d dev
-        usermod -aG sudo dev
-      fi
-"#,
-        instance.repo_name,
-        VM_TYPE,
-        ARCH,
-        UBUNTU_IMAGE_URL,
-        ARCH,
-        instance.worktree_mount_host.display(),
-        instance.worktree_mount_guest,
-        instance.bare_repo_mount_host.display(),
-        instance.bare_repo_mount_guest,
-        MEMORY,
-        CPUS,
-        DISK,
-        ssh_port
-    )
+    // Add comment header
+    let yaml = serde_yaml::to_string(&config)
+        .context("failed to serialize Lima configuration to YAML")?;
+    Ok(format!(
+        "# Lima instance for {} development\n{}",
+        instance.repo_name, yaml
+    ))
 }
 
 /// Write Lima YAML configuration to a specific path
 fn write_lima_yaml(instance: &InstanceModel, yaml_path: &Path) -> Result<()> {
-    let yaml_content = generate_lima_yaml(instance);
+    let yaml_content = generate_lima_yaml(instance)?;
     std::fs::write(yaml_path, yaml_content).context("failed to write Lima YAML configuration")?;
     Ok(())
 }
