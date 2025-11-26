@@ -31,6 +31,28 @@
         "type": "github"
       }
     },
+    "packages": {
+      "inputs": {
+        "crane": [
+          "crane"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "project-root": [
+          "project-root"
+        ]
+      },
+      "locked": {
+        "path": "../packages",
+        "type": "path"
+      },
+      "original": {
+        "path": "../packages",
+        "type": "path"
+      },
+      "parent": []
+    },
     "project-root": {
       "flake": false,
       "locked": {
@@ -47,6 +69,7 @@
       "inputs": {
         "crane": "crane",
         "nixpkgs": "nixpkgs",
+        "packages": "packages",
         "project-root": "project-root"
       }
     }
