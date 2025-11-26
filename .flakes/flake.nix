@@ -65,6 +65,10 @@
       # Formatter output: formatter.${system} structure
       formatter = forAllSystems (system: formatter-flake.${system}.formatter);
       # Packages output: packages.${system} structure
-      packages = forAllSystems (system: packages-flake.${system}.packages);
+      # Also include checks as packages so they can be built with nix build .#checks.<name>
+      packages = forAllSystems (system: 
+        packages-flake.${system}.packages // 
+        lib.mapAttrs' (name: value: lib.nameValuePair "checks.${name}" value) checks-flake.${system}.checks
+      );
     };
 }
