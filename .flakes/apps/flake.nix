@@ -100,6 +100,6 @@
         # Build apps from definitions using dynamic paths
         lib.mapAttrs
           (name: def: mkAppFromScript name (scriptPath def.script) def.description)
-          appDefinitions;
+          appDefinitions
     };
 }
