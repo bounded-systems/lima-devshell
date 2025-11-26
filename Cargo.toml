@@ -7,6 +7,11 @@ edition = "2021"
 name = "lima-devshell"
 path = "src/main.rs"
 
+[features]
+# Feature to indicate that lima-devshell-config.json exists and should be embedded
+# This is enabled during Nix builds when the config file is generated
+has-config = []
+
 [dependencies]
 anyhow = "1.0"
 clap = { version = "4.5", features = ["derive"] }

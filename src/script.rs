@@ -17,11 +17,12 @@ struct StaticConfig {
 fn load_static_config() -> StaticConfig {
     // Try to load from embedded config file (generated at build time via impure-flakes-prep)
     // The config file is copied to src/ during the Nix build so it can be included at compile time
-    #[cfg(feature = "embedded-config")]
-    const EMBEDDED_CONFIG: &str = include_str!("lima-devshell-config.json");
-    
-    #[cfg(feature = "embedded-config")]
+    // During local development (cargo build), this file won't exist, so we'll fall back to env vars
+    #[cfg(feature = "has-config")]
     {
+        // Include the config file that was generated at build time
+        const EMBEDDED_CONFIG: &str = include_str!("lima-devshell-config.json");
+        
         // Try to parse the embedded config, fallback if it fails
         if let Ok(config) = serde_json::from_str::<StaticConfig>(EMBEDDED_CONFIG) {
             return config;
@@ -29,6 +30,10 @@ fn load_static_config() -> StaticConfig {
     }
     
     // Fallback: try environment variables, then defaults
+    // This is used when:
+    // 1. Building locally without the config file (cargo build)
+    // 2. The embedded config failed to parse
+    // 3. Runtime environment variable override is desired
     StaticConfig {
         bootstrap_flake_path: env::var("LIMA_DEVSHELL_BOOTSTRAP_PATH")
             .unwrap_or_else(|_| "/worktrees/lima-devshell".to_string()),

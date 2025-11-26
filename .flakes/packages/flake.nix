@@ -43,8 +43,8 @@
           name = "lima-devshell-config.json";
           destination = "/lima-devshell-config.json";
           text = builtins.toJSON {
-            bootstrap_flake_path = builtins.getEnv "LIMA_DEVSHELL_BOOTSTRAP_PATH" or "/worktrees/lima-devshell";
-            bootstrap_github_url = builtins.getEnv "LIMA_DEVSHELL_BOOTSTRAP_GITHUB" or "github:owner/lima-devshell";
+            bootstrap_flake_path = let env = builtins.getEnv "LIMA_DEVSHELL_BOOTSTRAP_PATH"; in if env != "" then env else "/worktrees/lima-devshell";
+            bootstrap_github_url = let env = builtins.getEnv "LIMA_DEVSHELL_BOOTSTRAP_GITHUB"; in if env != "" then env else "github:owner/lima-devshell";
           };
         };
 
@@ -65,8 +65,8 @@
             # Copy static config to src/ directory so it can be included at compile time
             cp ${staticConfig}/lima-devshell-config.json src/lima-devshell-config.json
           '';
-          # Enable the embedded-config feature so the config file is included
-          cargoExtraArgs = "--features embedded-config";
+          # Enable the has-config feature so the config file is included at compile time
+          cargoExtraArgs = "--features has-config";
         };
 
         # Build cargo artifacts first (dependencies)
