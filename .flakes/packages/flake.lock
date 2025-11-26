@@ -1,5 +1,24 @@
 {
   "nodes": {
+    "apps": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "project-root": [
+          "project-root"
+        ]
+      },
+      "locked": {
+        "path": "../apps",
+        "type": "path"
+      },
+      "original": {
+        "path": "../apps",
+        "type": "path"
+      },
+      "parent": []
+    },
     "crane": {
       "locked": {
         "lastModified": 1763938834,
@@ -45,6 +64,7 @@
     },
     "root": {
       "inputs": {
+        "apps": "apps",
         "crane": "crane",
         "nixpkgs": "nixpkgs",
         "project-root": "project-root"
