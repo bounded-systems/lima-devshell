@@ -11,8 +11,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     crane.url = "github:ipetkov/crane";
     # Project root path (git repo root) - non-flake path input
-    # Default to parent directory for standalone use, overridden by parent via follows
-    project-root.url = "path:..";
+    # Required input, must be passed from parent flake via follows
     project-root.flake = false;
   };
 

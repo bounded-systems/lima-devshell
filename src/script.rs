@@ -2,7 +2,6 @@ use crate::app::AppContext;
 use crate::paths::GUEST_WORKTREE_ROOT;
 use serde::{Deserialize, Serialize};
 use std::env;
-use std::path::PathBuf;
 
 // Note: This module depends on app::AppContext, so it must be declared after app module
 
@@ -119,13 +118,14 @@ else
   }}
 fi
 "#,
-        ctx.guest_cwd,
-        GUEST_WORKTREE_ROOT,
-        GUEST_WORKTREE_ROOT,
-        GUEST_WORKTREE_ROOT,
-        GUEST_WORKTREE_ROOT,
-        bootstrap_path,
-        bootstrap_path,
-        bootstrap_github
+        ctx.guest_cwd,        // {} in line 72: default directory
+        GUEST_WORKTREE_ROOT,  // {} in line 79: case pattern
+        GUEST_WORKTREE_ROOT,  // {} in line 80: success message
+        GUEST_WORKTREE_ROOT,  // {} in line 83: error message
+        GUEST_WORKTREE_ROOT,  // {} in line 85: expected root message
+        bootstrap_path,       // {} in line 111: check if bootstrap dir exists
+        bootstrap_path,       // {} in line 112: nix develop with bootstrap path
+        bootstrap_path,       // {} in line 114: error message about bootstrap
+        bootstrap_github      // {} in line 116: nix develop with GitHub URL
     )
 }
