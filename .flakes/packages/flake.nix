@@ -112,18 +112,11 @@
             text = builtins.readFile (inputsDir + "/lima.yaml.template");
           };
 
-          # Test script to verify all packages and checks build successfully
-          # Script is read from static inputs directory with tool substitutions
-          test-all-builds = pkgs.writeShellApplication {
-            name = "test-all-builds";
-            text = let
-              scriptContent = builtins.readFile (inputsDir + "/test-all-builds.sh");
-              # Replace ${PYTHON3_BIN} with actual python3 path
-              replacedContent = lib.replaceStrings 
-                [ "${PYTHON3_BIN}" ] 
-                [ "${pkgs.python3}" ] 
-                scriptContent;
-            in replacedContent;
+          # Test script to verify packages build successfully
+          # Script is read from static inputs directory
+          test-build = pkgs.writeShellApplication {
+            name = "test-build";
+            text = builtins.readFile (inputsDir + "/test-build.sh");
           };
 
           # Default package
