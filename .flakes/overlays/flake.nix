@@ -5,8 +5,7 @@
 #
 # Note: Overlays are functions that receive `final` and `prev` from the nixpkgs
 # that uses them, so they don't need nixpkgs as an input.
-#
-# Input metadata and documentation is stored in inputs/ directory.
+# It must NOT have an inputs/ directory (no assets, only pure overlay functions).
 {
   description = "Nixpkgs overlays";
 

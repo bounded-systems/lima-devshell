@@ -25,6 +25,22 @@ This directory centralizes:
 
 All configuration happens at the router level (`.flakes/flake.nix`), not in individual subflakes.
 
+## Subflake Constraints
+
+### Inputs Directory Rules
+
+- **Most subflakes** (apps, checks, packages, etc.) may have an `inputs/` directory for storing input assets (shell scripts, config files, etc.)
+- **The `lib` and `overlays` subflakes** must NOT have an `inputs/` directory because:
+  - They are pure helper libraries with no assets
+  - All inputs are defined directly in `flake.nix`
+  - They only provide functions (lib) or overlay functions (overlays), not scripts or other file-based resources
+
+### Isolation Rules
+
+- Subflakes must not have direct cross-directory dependencies
+- All composition happens only in `.flakes/flake.nix` (the sub-router)
+- Each subflake owns exactly one top-level output space
+
 ## Documentation
 
 - **`GRAPH-TOOLS.md`**: Complete documentation for graph-aware tools, usage, and architecture

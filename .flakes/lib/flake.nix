@@ -2,6 +2,7 @@
 # It may depend on: nixpkgs, flake-utils (pure utility libraries).
 # It must not import from other .flakes/* directories.
 # This is a pure helper library with no project-space knowledge.
+# It must NOT have an inputs/ directory (no assets, only pure functions).
 {
   description = "Pure helper functions and utilities";
 
