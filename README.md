@@ -186,6 +186,28 @@ The `lima-devshell-template.yaml` file serves as the base configuration. The Rus
 
 To modify the base template, edit `lima-devshell-template.yaml` and update the constants in `src/lima.rs` accordingly.
 
+### JSON Schema
+
+This project includes a comprehensive JSON schema (`lima-config-schema.json`) based on the [Lima default template](https://raw.githubusercontent.com/lima-vm/lima/refs/heads/master/templates/default.yaml). The schema can be used for:
+
+- **Validation**: Validate Lima YAML configuration files
+- **Documentation**: Understand all available configuration options
+- **IDE Support**: Enable autocomplete and validation in editors that support JSON Schema
+
+The schema covers all major Lima configuration fields including:
+- VM type and architecture settings
+- Image and resource configuration
+- Mount and network settings
+- SSH and port forwarding
+- Provisioning scripts
+- Environment variables
+- And many more advanced options
+
+You can use the schema with tools like:
+- [ajv-cli](https://github.com/ajv-validator/ajv-cli) for command-line validation
+- VS Code with JSON Schema support
+- Online validators like [jsonschemavalidator.net](https://www.jsonschemavalidator.net/)
+
 ## Repository Structure
 
 - **Bare repo**: `~/.local/share/git/bare/io.github/bdelanghe/lima-devshell.git/`

@@ -1,0 +1,605 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://lima-vm.io/schemas/lima-config.json",
+  "title": "Lima VM Configuration Schema",
+  "description": "JSON Schema for Lima VM instance configuration files (lima.yaml)",
+  "type": "object",
+  "properties": {
+    "vmType": {
+      "type": ["string", "null"],
+      "enum": ["qemu", "vz", "default", null],
+      "description": "VM type: 'qemu', 'vz' (on macOS 13 and later), or 'default'. Can only be specified on creating the instance.",
+      "default": null
+    },
+    "arch": {
+      "type": ["string", "null"],
+      "enum": ["default", "x86_64", "aarch64", null],
+      "description": "Architecture: 'default', 'x86_64', or 'aarch64'",
+      "default": null
+    },
+    "images": {
+      "type": "array",
+      "description": "OpenStack-compatible disk images",
+      "items": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "URL for the disk image"
+          },
+          "arch": {
+            "type": "string",
+            "description": "Architecture of the image"
+          },
+          "digest": {
+            "type": "string",
+            "description": "Optional digest for image verification"
+          }
+        },
+        "required": ["location", "arch"]
+      },
+      "default": []
+    },
+    "cpus": {
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "description": "Number of CPUs",
+      "default": null
+    },
+    "memory": {
+      "type": ["string", "null"],
+      "pattern": "^\\d+[KMGT]i?B$",
+      "description": "Memory size (e.g., '4GiB', '8GB')",
+      "default": null
+    },
+    "disk": {
+      "type": ["string", "null"],
+      "pattern": "^\\d+[KMGT]i?B$",
+      "description": "Disk size (e.g., '100GiB', '200GB')",
+      "default": null
+    },
+    "mounts": {
+      "type": "array",
+      "description": "Host directories to mount in the guest",
+      "items": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "Host directory path (supports template variables: {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, {{.User}}, {{.Param.Key}})"
+          },
+          "mountPoint": {
+            "type": "string",
+            "description": "Mount point in guest (supports template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, {{.Param.Key}})"
+          },
+          "writable": {
+            "type": "boolean",
+            "description": "Whether the mount is writable",
+            "default": false
+          },
+          "sshfs": {
+            "type": "object",
+            "properties": {
+              "cache": {
+                "type": "boolean",
+                "description": "Enable SSHFS cache",
+                "default": true
+              },
+              "followSymlinks": {
+                "type": "boolean",
+                "description": "Follow symlinks",
+                "default": false
+              },
+              "sftpDriver": {
+                "type": "string",
+                "enum": ["builtin", "openssh-sftp-server"],
+                "description": "SFTP driver to use"
+              }
+            }
+          },
+          "9p": {
+            "type": "object",
+            "properties": {
+              "securityModel": {
+                "type": "string",
+                "enum": ["passthrough", "mapped-xattr", "mapped-file", "none"],
+                "description": "9P security model",
+                "default": "none"
+              },
+              "protocolVersion": {
+                "type": "string",
+                "enum": ["9p2000", "9p2000.u", "9p2000.L"],
+                "description": "9P protocol version",
+                "default": "9p2000.L"
+              },
+              "msize": {
+                "type": "string",
+                "pattern": "^\\d+[KMGT]i?B$",
+                "description": "9P packet payload size",
+                "default": "128KiB"
+              },
+              "cache": {
+                "type": "string",
+                "enum": ["none", "loose", "fscache", "mmap"],
+                "description": "Caching policy",
+                "default": "fscache"
+              }
+            }
+          }
+        },
+        "required": ["location"]
+      },
+      "default": []
+    },
+    "mountTypesUnsupported": {
+      "type": "array",
+      "description": "List of mount types not supported by the kernel",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "mountType": {
+      "type": ["string", "null"],
+      "enum": ["reverse-sshfs", "9p", "virtiofs", "default", null],
+      "description": "Mount type for mounts",
+      "default": null
+    },
+    "mountInotify": {
+      "type": ["boolean", "null"],
+      "description": "Enable inotify support for mounted directories (EXPERIMENTAL)",
+      "default": null
+    },
+    "additionalDisks": {
+      "type": "array",
+      "description": "Lima disks to attach to the instance",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "description": "Disk name"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Disk name"
+              },
+              "format": {
+                "type": "boolean",
+                "description": "Whether to format the disk"
+              },
+              "fsType": {
+                "type": "string",
+                "description": "Filesystem type (e.g., 'ext4')"
+              }
+            },
+            "required": ["name"]
+          }
+        ]
+      },
+      "default": []
+    },
+    "ssh": {
+      "type": "object",
+      "properties": {
+        "localPort": {
+          "type": ["integer", "null"],
+          "minimum": 0,
+          "maximum": 65535,
+          "description": "Localhost port forwarded to port 22 of the guest (0 = auto-assign)",
+          "default": null
+        },
+        "loadDotSSHPubKeys": {
+          "type": ["boolean", "null"],
+          "description": "Load ~/.ssh/*.pub in addition to $LIMA_HOME/_config/user.pub",
+          "default": null
+        },
+        "forwardAgent": {
+          "type": ["boolean", "null"],
+          "description": "Forward SSH agent into the instance",
+          "default": null
+        },
+        "forwardX11": {
+          "type": ["boolean", "null"],
+          "description": "Forward X11 into the instance",
+          "default": null
+        },
+        "forwardX11Trusted": {
+          "type": ["boolean", "null"],
+          "description": "Trust forwarded X11 clients",
+          "default": null
+        },
+        "overVsock": {
+          "type": ["boolean", "null"],
+          "description": "Enable SSH over vsock",
+          "default": null
+        }
+      }
+    },
+    "caCerts": {
+      "type": "object",
+      "properties": {
+        "removeDefaults": {
+          "type": ["boolean", "null"],
+          "description": "Remove all default trusted CA certificates",
+          "default": null
+        },
+        "files": {
+          "type": "array",
+          "description": "List of trusted CA certificate files",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        },
+        "certs": {
+          "type": "array",
+          "description": "List of trusted CA certificates (direct content)",
+          "items": {
+            "type": "string"
+          },
+          "default": []
+        }
+      }
+    },
+    "env": {
+      "type": "object",
+      "description": "Extra environment variables loaded into the VM at startup",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {}
+    },
+    "param": {
+      "type": "object",
+      "description": "Variables used for customizing functionality (available as {{.Param.Key}} in templates)",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "default": {}
+    },
+    "propagateProxyEnv": {
+      "type": ["boolean", "null"],
+      "description": "Override proxy environment variables with values from current process environment",
+      "default": null
+    },
+    "hostResolver": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": ["boolean", "null"],
+          "description": "Enable host resolver DNS server",
+          "default": null
+        },
+        "ipv6": {
+          "type": ["boolean", "null"],
+          "description": "Enable IPv6 in host resolver",
+          "default": null
+        },
+        "hosts": {
+          "type": "object",
+          "description": "Static hostname mappings",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {}
+        }
+      }
+    },
+    "dns": {
+      "type": "array",
+      "description": "Explicit DNS addresses for qemu user-mode networking",
+      "items": {
+        "type": "string",
+        "format": "ipv4"
+      },
+      "default": []
+    },
+    "guestInstallPrefix": {
+      "type": ["string", "null"],
+      "description": "Prefix to use for installing guest agent and containerd",
+      "default": null
+    },
+    "plain": {
+      "type": ["boolean", "null"],
+      "description": "Enable 'plain' mode (ignores mounts, port forwarding, containerd, etc.)",
+      "default": null
+    },
+    "nestedVirtualization": {
+      "type": ["boolean", "null"],
+      "description": "Enable nested virtualization (Apple M3+ with vmType: vz)",
+      "default": null
+    },
+    "provision": {
+      "type": "array",
+      "description": "Provisioning scripts to run",
+      "items": {
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": ["system", "user"],
+            "description": "Execution mode: 'system' (as root) or 'user' (as non-root user)"
+          },
+          "script": {
+            "type": "string",
+            "description": "Shell script to execute"
+          }
+        },
+        "required": ["mode", "script"]
+      },
+      "default": []
+    },
+    "networks": {
+      "type": "array",
+      "description": "Network configurations",
+      "items": {
+        "type": "object",
+        "properties": {
+          "lima": {
+            "type": "string",
+            "description": "Lima network name"
+          },
+          "interface": {
+            "type": "string",
+            "description": "Network interface name"
+          },
+          "macAddress": {
+            "type": "string",
+            "pattern": "^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$",
+            "description": "MAC address"
+          },
+          "switchPort": {
+            "type": "integer",
+            "description": "Switch port number"
+          }
+        }
+      },
+      "default": []
+    },
+    "portForwards": {
+      "type": "array",
+      "description": "Port forwarding rules",
+      "items": {
+        "type": "object",
+        "properties": {
+          "guestIP": {
+            "type": "string",
+            "description": "Guest IP address"
+          },
+          "guestPort": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535,
+            "description": "Guest port number"
+          },
+          "guestPortRange": {
+            "type": "string",
+            "pattern": "^\\d+-\\d+$",
+            "description": "Guest port range (e.g., '8080-8090')"
+          },
+          "hostIP": {
+            "type": "string",
+            "description": "Host IP address"
+          },
+          "hostPort": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 65535,
+            "description": "Host port number"
+          },
+          "hostPortRange": {
+            "type": "string",
+            "pattern": "^\\d+-\\d+$",
+            "description": "Host port range (e.g., '8080-8090')"
+          },
+          "proto": {
+            "type": "string",
+            "enum": ["tcp", "udp"],
+            "description": "Protocol",
+            "default": "tcp"
+          },
+          "ignore": {
+            "type": "boolean",
+            "description": "Ignore this port forward rule",
+            "default": false
+          }
+        }
+      },
+      "default": []
+    },
+    "copyToHost": {
+      "type": "array",
+      "description": "Files to copy from guest to host",
+      "items": {
+        "type": "object",
+        "properties": {
+          "guest": {
+            "type": "string",
+            "description": "Guest file path"
+          },
+          "host": {
+            "type": "string",
+            "description": "Host file path"
+          },
+          "deleteOnStop": {
+            "type": "boolean",
+            "description": "Delete file from host when instance stops",
+            "default": false
+          }
+        },
+        "required": ["guest", "host"]
+      },
+      "default": []
+    },
+    "copyToGuest": {
+      "type": "array",
+      "description": "Files to copy from host to guest",
+      "items": {
+        "type": "object",
+        "properties": {
+          "host": {
+            "type": "string",
+            "description": "Host file path"
+          },
+          "guest": {
+            "type": "string",
+            "description": "Guest file path"
+          },
+          "owner": {
+            "type": "string",
+            "description": "File owner in guest"
+          }
+        },
+        "required": ["host", "guest"]
+      },
+      "default": []
+    },
+    "message": {
+      "type": ["string", "null"],
+      "description": "Information message shown to the user (Go template)",
+      "default": null
+    },
+    "guestAgent": {
+      "type": "object",
+      "description": "Guest agent configuration (EXPERIMENTAL - may not be in all Lima versions)",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Enable guest agent"
+        },
+        "logPath": {
+          "type": "string",
+          "description": "Path to guest agent log file"
+        }
+      },
+      "required": ["enabled"]
+    },
+    "base": {
+      "type": "array",
+      "description": "Base templates to inherit from (e.g., ['template:_images/ubuntu', 'template:_default/mounts'])",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "user": {
+      "type": "object",
+      "description": "User configuration for the VM",
+      "properties": {
+        "name": {
+          "type": ["string", "null"],
+          "description": "Username (defaults to host username if valid Linux username, otherwise 'lima')",
+          "default": null
+        },
+        "fullName": {
+          "type": ["string", "null"],
+          "description": "Full name or display name of the user",
+          "default": null
+        }
+      }
+    },
+    "containerd": {
+      "type": "object",
+      "description": "containerd configuration",
+      "properties": {
+        "system": {
+          "type": ["boolean", "null"],
+          "description": "Enable system-wide (rootful) containerd",
+          "default": null
+        },
+        "user": {
+          "type": ["boolean", "null"],
+          "description": "Enable user-level (rootless) containerd",
+          "default": null
+        }
+      }
+    },
+    "cpuType": {
+      "type": ["string", "null"],
+      "description": "CPU type for QEMU (e.g., 'host', 'max')",
+      "default": null
+    },
+    "firmware": {
+      "type": "object",
+      "description": "Firmware configuration",
+      "properties": {
+        "legacyBIOS": {
+          "type": ["boolean", "null"],
+          "description": "Use legacy BIOS instead of UEFI",
+          "default": null
+        }
+      }
+    },
+    "audio": {
+      "type": "object",
+      "description": "Audio device configuration",
+      "properties": {
+        "device": {
+          "type": ["string", "null"],
+          "description": "Audio device (e.g., 'hda')",
+          "default": null
+        }
+      }
+    },
+    "video": {
+      "type": "object",
+      "description": "Video device configuration",
+      "properties": {
+        "display": {
+          "type": ["string", "null"],
+          "description": "Display type (e.g., 'vnc', 'none')",
+          "default": null
+        },
+        "resolution": {
+          "type": ["string", "null"],
+          "description": "Display resolution (e.g., '1920x1080')",
+          "default": null
+        }
+      }
+    },
+    "rosetta": {
+      "type": "object",
+      "description": "Rosetta 2 configuration (for x86_64 on Apple Silicon)",
+      "properties": {
+        "enabled": {
+          "type": ["boolean", "null"],
+          "description": "Enable Rosetta 2 emulation",
+          "default": null
+        }
+      }
+    },
+    "timezone": {
+      "type": ["string", "null"],
+      "description": "Timezone (e.g., 'America/New_York', 'UTC')",
+      "default": null
+    },
+    "os": {
+      "type": ["string", "null"],
+      "description": "Operating system identifier",
+      "default": null
+    },
+    "upgradePackages": {
+      "type": ["boolean", "null"],
+      "description": "Upgrade packages during provisioning",
+      "default": null
+    },
+    "vmOpts": {
+      "type": "array",
+      "description": "Additional VM options passed to QEMU or VZ",
+      "items": {
+        "type": "string"
+      },
+      "default": []
+    },
+    "minimumLimaVersion": {
+      "type": ["string", "null"],
+      "description": "Minimum required Lima version (e.g., '2.0.0')",
+      "default": null
+    }
+  },
+  "additionalProperties": false
+}
+
