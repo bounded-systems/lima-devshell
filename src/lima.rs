@@ -2,6 +2,7 @@ use crate::app::{AppContext, InstanceModel};
 use crate::script::build_guest_script;
 use anyhow::{Context as AnyhowContext, Result};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::collections::HashMap;
 use std::env;
 use std::io::Write;
@@ -142,11 +143,40 @@ fn get_lima_home() -> Result<PathBuf> {
 }
 
 /// Check if a Lima instance is currently running
+/// Uses `limactl list --json` to get actual state, not just socket existence
 fn is_instance_running(instance_name: &str) -> Result<bool> {
-    let lima_home = get_lima_home()?;
-    let lima_instance_dir = lima_home.join(instance_name);
-    let socket_path = lima_instance_dir.join("ha.sock");
-    Ok(socket_path.exists())
+    let output = Command::new("limactl")
+        .args(["list", "--json", instance_name])
+        .output()
+        .context("failed to execute limactl list")?;
+
+    if !output.status.success() {
+        // If instance doesn't exist, limactl returns non-zero
+        // This is fine - instance is not running
+        return Ok(false);
+    }
+
+    let stdout = String::from_utf8(output.stdout)
+        .context("limactl list output is not valid UTF-8")?;
+
+    // Parse JSON output - limactl list --json returns an array of instances
+    let instances: Vec<Value> = serde_json::from_str(&stdout)
+        .context("failed to parse limactl list JSON output")?;
+
+    // Find the instance with matching name
+    for instance in instances {
+        if let Some(name) = instance.get("name").and_then(|n| n.as_str()) {
+            if name == instance_name {
+                // Check the status field - "Running" means it's actually running
+                if let Some(status) = instance.get("status").and_then(|s| s.as_str()) {
+                    return Ok(status == "Running");
+                }
+            }
+        }
+    }
+
+    // Instance not found in list, so it's not running
+    Ok(false)
 }
 
 /// Start a Lima instance from a YAML file
@@ -177,6 +207,19 @@ fn start_lima_instance_with_yaml(instance_name: &str, config_path: &Path) -> Res
         anyhow::bail!("failed to start Lima instance");
     }
 
+    Ok(())
+}
+
+/// Stop a Lima instance gracefully
+/// Uses --tty=false (via --yes) to ensure non-interactive operation.
+fn stop_lima_instance(instance_name: &str) -> Result<()> {
+    let status = Command::new("limactl")
+        .args(["stop", "--yes", instance_name])
+        .status()
+        .context("failed to execute limactl stop")?;
+
+    // Don't fail if stop fails - instance might already be stopped
+    // This is a best-effort cleanup operation
     Ok(())
 }
 
@@ -283,7 +326,17 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &Path) -> Result<
             return Ok(());
         }
 
-        // Instance exists but isn't running - delete it to ensure clean state
+        // Instance exists but isn't running - stop it first (best effort)
+        // This ensures any hostagent processes are properly cleaned up
+        println!(
+            "lima-devshell: stopping existing instance '{}' before cleanup...",
+            instance.name
+        );
+        let _ = stop_lima_instance(&instance.name);
+        // Wait a moment for cleanup to complete
+        thread::sleep(Duration::from_secs(2));
+
+        // Then delete it to ensure clean state
         // This prevents issues with stale/cached YAML configurations
         println!(
             "lima-devshell: deleting existing instance '{}' to ensure clean configuration...",
@@ -411,7 +464,10 @@ mod tests {
         // Verify SSH config uses non-interactive defaults
         // localPort: 0 means auto-assign (good for automation)
         let parsed: LimaConfig = serde_yaml::from_str(&yaml).expect("valid YAML");
-        assert_eq!(parsed.ssh.local_port, 0, "localPort should be 0 for auto-assign");
+        assert_eq!(
+            parsed.ssh.local_port, 0,
+            "localPort should be 0 for auto-assign"
+        );
         assert!(
             parsed.ssh.load_dot_ssh_pub_keys,
             "loadDotSSHPubKeys should be true"
