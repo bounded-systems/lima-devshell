@@ -72,6 +72,7 @@
           allPackages = packages-flake.${system}.packages;
           allChecks = checks-flake.${system}.checks;
           # Helper function to wrap single-file outputs in directories
+          # This ensures symlinkJoin can handle both files and directories
           wrapInDir = name: drv:
             pkgs.runCommand "${name}-wrapped"
               {
@@ -79,11 +80,17 @@
               } ''
               mkdir -p $out
               if [ -f "$drv" ]; then
-                # It's a single file, wrap it in a directory
+                # It's a single file, wrap it in a directory with the same name
                 cp "$drv" "$out/${name}"
-              else
-                # It's a directory, symlink its contents
-                ln -s "$drv"/* "$out/" 2>/dev/null || cp -r "$drv"/* "$out/" 2>/dev/null || true
+              elif [ -d "$drv" ]; then
+                # It's a directory, copy/symlink its contents
+                if [ "$(ls -A "$drv" 2>/dev/null)" ]; then
+                  # Directory has contents, copy them
+                  cp -r "$drv"/* "$out/" 2>/dev/null || true
+                else
+                  # Empty directory, create a marker
+                  touch "$out/.directory"
+                fi
               fi
             '';
 
