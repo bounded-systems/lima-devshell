@@ -169,12 +169,12 @@ fn is_instance_running(instance_name: &str) -> Result<bool> {
         return Ok(false);
     }
 
-    let stdout = String::from_utf8(output.stdout)
-        .context("limactl list output is not valid UTF-8")?;
+    let stdout =
+        String::from_utf8(output.stdout).context("limactl list output is not valid UTF-8")?;
 
     // Parse JSON output - limactl list --json returns an array of instances
-    let instances: Vec<Value> = serde_json::from_str(&stdout)
-        .context("failed to parse limactl list JSON output")?;
+    let instances: Vec<Value> =
+        serde_json::from_str(&stdout).context("failed to parse limactl list JSON output")?;
 
     // Find the instance with matching name
     for instance in instances {
@@ -375,8 +375,7 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &Path) -> Result<
                 let error_msg = e.to_string();
                 // Check if this is a port conflict error
                 if attempt < max_retries
-                    && (error_msg.contains("address already in use")
-                        || error_msg.contains("bind"))
+                    && (error_msg.contains("address already in use") || error_msg.contains("bind"))
                 {
                     println!(
                         "lima-devshell: port conflict detected, retrying (attempt {}/{})...",
