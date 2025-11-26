@@ -37,6 +37,17 @@
         # Filter source files (excludes vendor, target, etc.)
         src = craneLib.cleanCargoSource (craneLib.path projectRoot);
 
+        # Generate static config file using impure-flakes-prep pattern
+        # This reads from environment variables at build time and creates a static JSON file
+        staticConfig = pkgs.writeTextFile {
+          name = "lima-devshell-config.json";
+          destination = "/lima-devshell-config.json";
+          text = builtins.toJSON {
+            bootstrap_flake_path = builtins.getEnv "LIMA_DEVSHELL_BOOTSTRAP_PATH" or "/worktrees/lima-devshell";
+            bootstrap_github_url = builtins.getEnv "LIMA_DEVSHELL_BOOTSTRAP_GITHUB" or "github:owner/lima-devshell";
+          };
+        };
+
         # Common args for crane builds
         commonArgs = {
           inherit src;
@@ -47,6 +58,15 @@
             openssl
             pkg-config
           ];
+          # Embed the static config file in the binary at build time
+          # Copy the config file to src/ so it can be included at compile time via include_str!
+          # This follows the impure-flakes-prep pattern for static config
+          preBuild = ''
+            # Copy static config to src/ directory so it can be included at compile time
+            cp ${staticConfig}/lima-devshell-config.json src/lima-devshell-config.json
+          '';
+          # Enable the embedded-config feature so the config file is included
+          cargoExtraArgs = "--features embedded-config";
         };
 
         # Build cargo artifacts first (dependencies)

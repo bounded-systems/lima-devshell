@@ -48,11 +48,12 @@
 
   outputs = { self, nixpkgs, project-root, apps-flake, checks-flake, formatter-flake, packages-flake, lib-flake, ... }:
     let
+      # Use nixpkgs.lib directly instead of importing a specific system's pkgs
+      lib = nixpkgs.lib;
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
-      # Import nixpkgs for lib access
-      pkgsFor = system: import nixpkgs { inherit system; };
-      lib = (pkgsFor "x86_64-linux").lib;
       forAllSystems = f: lib.genAttrs systems f;
+      # Import nixpkgs for system-specific packages
+      pkgsFor = system: import nixpkgs { inherit system; };
     in
     {
       # Lib output maps directly to lib subflake (not system-specific)
@@ -124,6 +125,11 @@
           # Note: checks are available via .#checks.<name> from the checks output, not packages
         allPackages // {
           default = all;
+          all = all; # Named explicitly as well for clarity
         });
+      # CI output: explicit CI entrypoint that builds everything + runs all checks
+      ci = forAllSystems (system: {
+        all = self.packages.${system}.all or self.packages.${system}.default;
+      });
     };
 }

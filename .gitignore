@@ -26,6 +26,9 @@ vendor/
 # Generated Lima configuration (created dynamically per worktree)
 lima.yaml
 
+# Static config file generated at build time (gitignored, embedded in binary)
+lima-devshell-config.json
+
 # direnv cache files
 .direnv/
 

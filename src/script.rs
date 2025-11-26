@@ -1,21 +1,54 @@
 use crate::app::AppContext;
 use crate::paths::GUEST_WORKTREE_ROOT;
+use serde::{Deserialize, Serialize};
 use std::env;
+use std::path::PathBuf;
 
 // Note: This module depends on app::AppContext, so it must be declared after app module
 
-/// Get the bootstrap flake path, either from environment variable or use a placeholder
-/// Users should set LIMA_DEVSHELL_BOOTSTRAP_PATH if they need a specific bootstrap flake
-fn get_bootstrap_flake_path() -> String {
-    env::var("LIMA_DEVSHELL_BOOTSTRAP_PATH")
-        .unwrap_or_else(|_| "/worktrees/lima-devshell".to_string())
+/// Static configuration loaded at compile time
+#[derive(Debug, Serialize, Deserialize)]
+struct StaticConfig {
+    bootstrap_flake_path: String,
+    bootstrap_github_url: String,
 }
 
-/// Get the bootstrap flake GitHub URL, either from environment variable or use a placeholder
-/// Users should set LIMA_DEVSHELL_BOOTSTRAP_GITHUB if they need a specific GitHub URL
+/// Load static config from embedded file or fallback to defaults
+fn load_static_config() -> StaticConfig {
+    // Try to load from embedded config file (generated at build time via impure-flakes-prep)
+    // The config file is copied to src/ during the Nix build so it can be included at compile time
+    #[cfg(feature = "embedded-config")]
+    const EMBEDDED_CONFIG: &str = include_str!("lima-devshell-config.json");
+    
+    #[cfg(feature = "embedded-config")]
+    {
+        // Try to parse the embedded config, fallback if it fails
+        if let Ok(config) = serde_json::from_str::<StaticConfig>(EMBEDDED_CONFIG) {
+            return config;
+        }
+    }
+    
+    // Fallback: try environment variables, then defaults
+    StaticConfig {
+        bootstrap_flake_path: env::var("LIMA_DEVSHELL_BOOTSTRAP_PATH")
+            .unwrap_or_else(|_| "/worktrees/lima-devshell".to_string()),
+        bootstrap_github_url: env::var("LIMA_DEVSHELL_BOOTSTRAP_GITHUB")
+            .unwrap_or_else(|_| "github:owner/lima-devshell".to_string()),
+    }
+}
+
+/// Get the bootstrap flake path from static config
+fn get_bootstrap_flake_path() -> String {
+    // Allow runtime override via environment variable
+    env::var("LIMA_DEVSHELL_BOOTSTRAP_PATH")
+        .unwrap_or_else(|_| load_static_config().bootstrap_flake_path)
+}
+
+/// Get the bootstrap flake GitHub URL from static config
 fn get_bootstrap_github_url() -> String {
+    // Allow runtime override via environment variable
     env::var("LIMA_DEVSHELL_BOOTSTRAP_GITHUB")
-        .unwrap_or_else(|_| "github:owner/lima-devshell".to_string())
+        .unwrap_or_else(|_| load_static_config().bootstrap_github_url)
 }
 
 /// Build the bash script that runs inside the Lima VM
