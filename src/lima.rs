@@ -81,7 +81,7 @@ fn detect_mount_type(vm_type: &str) -> Option<&'static str> {
 #[derive(Debug, Serialize, Deserialize)]
 struct Image {
     location: String, // required
-    arch: String,      // required
+    arch: String,     // required
     #[serde(skip_serializing_if = "Option::is_none")]
     digest: Option<String>, // optional
 }
@@ -173,8 +173,8 @@ struct LimaConfig {
     vm_type: Option<String>, // enum: "qemu" | "vz" | "default" | null
     #[serde(skip_serializing_if = "Option::is_none")]
     arch: Option<String>, // enum: "default" | "x86_64" | "aarch64" | null
-    images: Vec<Image>,   // default: []
-    mounts: Vec<Mount>,   // default: []
+    images: Vec<Image>, // default: []
+    mounts: Vec<Mount>, // default: []
     #[serde(skip_serializing_if = "Option::is_none")]
     memory: Option<String>, // pattern: "^\\d+[KMGT]i?B$"
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -183,7 +183,7 @@ struct LimaConfig {
     disk: Option<String>, // pattern: "^\\d+[KMGT]i?B$"
     #[serde(skip_serializing_if = "Option::is_none")]
     ssh: Option<SshConfig>,
-    env: HashMap<String, String>, // default: {}
+    env: HashMap<String, String>,  // default: {}
     provision: Vec<ProvisionStep>, // default: []
     #[serde(rename = "guestAgent", skip_serializing_if = "Option::is_none")]
     guest_agent: Option<GuestAgent>,
@@ -582,10 +582,10 @@ mod tests {
     #[test]
     fn test_detect_vm_type() {
         let vm_type = detect_vm_type();
-        
+
         // Verify we get a valid VM type (not empty)
         assert!(!vm_type.is_empty(), "VM type should not be empty");
-        
+
         // Verify we're not hitting the fallback on common platforms
         match std::env::consts::OS {
             "macos" => assert_eq!(vm_type, "vz", "macOS should use vz VM type"),
@@ -595,10 +595,13 @@ mod tests {
                 // Unknown platform - should fallback to qemu
                 assert_eq!(vm_type, "qemu", "Unknown platform should fallback to qemu");
                 // Log a warning that we're on an untested platform
-                eprintln!("WARNING: Running on untested platform: {}", std::env::consts::OS);
+                eprintln!(
+                    "WARNING: Running on untested platform: {}",
+                    std::env::consts::OS
+                );
             }
         }
-        
+
         // Verify it's one of the valid VM types
         assert!(
             matches!(vm_type, "vz" | "qemu" | "wsl2"),
@@ -610,10 +613,10 @@ mod tests {
     #[test]
     fn test_detect_arch() {
         let arch = detect_arch();
-        
+
         // Verify we get a valid architecture (not empty)
         assert!(!arch.is_empty(), "Architecture should not be empty");
-        
+
         // Verify we're not hitting the fallback on common architectures
         match std::env::consts::ARCH {
             "aarch64" | "arm64" => {
@@ -624,12 +627,18 @@ mod tests {
             }
             _ => {
                 // Unknown architecture - should fallback to x86_64
-                assert_eq!(arch, "x86_64", "Unknown architecture should fallback to x86_64");
+                assert_eq!(
+                    arch, "x86_64",
+                    "Unknown architecture should fallback to x86_64"
+                );
                 // Log a warning that we're on an untested architecture
-                eprintln!("WARNING: Running on untested architecture: {}", std::env::consts::ARCH);
+                eprintln!(
+                    "WARNING: Running on untested architecture: {}",
+                    std::env::consts::ARCH
+                );
             }
         }
-        
+
         // Verify it's one of the valid architectures
         assert!(
             matches!(arch, "aarch64" | "x86_64"),
@@ -644,12 +653,12 @@ mod tests {
         let vm_type = detect_vm_type();
         let arch = detect_arch();
         let os = std::env::consts::OS;
-        
+
         // macOS should use vz
         if os == "macos" {
             assert_eq!(vm_type, "vz", "macOS must use vz VM type");
         }
-        
+
         // Verify arch matches host architecture
         match std::env::consts::ARCH {
             "aarch64" | "arm64" => assert_eq!(arch, "aarch64"),
@@ -664,12 +673,18 @@ mod tests {
         let should_enable = should_enable_rosetta(vm_type);
         let os = std::env::consts::OS;
         let arch = detect_arch();
-        
+
         // Rosetta should only be enabled on macOS ARM with VZ
         if os == "macos" && arch == "aarch64" && vm_type == "vz" {
-            assert!(should_enable, "Rosetta should be enabled on macOS ARM with VZ");
+            assert!(
+                should_enable,
+                "Rosetta should be enabled on macOS ARM with VZ"
+            );
         } else {
-            assert!(!should_enable, "Rosetta should not be enabled on other platforms");
+            assert!(
+                !should_enable,
+                "Rosetta should not be enabled on other platforms"
+            );
         }
     }
 
@@ -678,7 +693,7 @@ mod tests {
         let vm_type = detect_vm_type();
         let mount_type = detect_mount_type(vm_type);
         let os = std::env::consts::OS;
-        
+
         // virtiofs should be detected for macOS with VZ
         if os == "macos" && vm_type == "vz" {
             assert_eq!(
@@ -688,8 +703,7 @@ mod tests {
             );
         } else {
             assert_eq!(
-                mount_type,
-                None,
+                mount_type, None,
                 "mount type should be None for other configurations (let Lima use defaults)"
             );
         }
@@ -710,7 +724,10 @@ mod tests {
     fn test_detect_mount_type_qemu() {
         // QEMU should not trigger virtiofs detection
         let mount_type = detect_mount_type("qemu");
-        assert_eq!(mount_type, None, "QEMU should not use virtiofs (let Lima use 9p default)");
+        assert_eq!(
+            mount_type, None,
+            "QEMU should not use virtiofs (let Lima use 9p default)"
+        );
     }
 
     #[test]
@@ -881,18 +898,22 @@ mod tests {
         } else {
             // For other configurations, mount type should be None (not serialized)
             assert_eq!(
-                parsed.mount_type,
-                None,
+                parsed.mount_type, None,
                 "mountType should be None for non-macOS-VZ configurations"
             );
             assert_eq!(
-                parsed.mount_inotify,
-                None,
+                parsed.mount_inotify, None,
                 "mountInotify should be None when not using virtiofs"
             );
             // Verify YAML does not contain these fields (they're skipped when None)
-            assert!(!yaml.contains("mountType:"), "mountType should not be in YAML when None");
-            assert!(!yaml.contains("mountInotify:"), "mountInotify should not be in YAML when None");
+            assert!(
+                !yaml.contains("mountType:"),
+                "mountType should not be in YAML when None"
+            );
+            assert!(
+                !yaml.contains("mountInotify:"),
+                "mountInotify should not be in YAML when None"
+            );
         }
     }
 }
