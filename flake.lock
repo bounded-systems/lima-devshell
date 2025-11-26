@@ -1,5 +1,34 @@
 {
   "nodes": {
+    "apps": {
+      "inputs": {
+        "nixpkgs": [
+          "flakes",
+          "checks-flake",
+          "packages",
+          "nixpkgs"
+        ],
+        "project-root": [
+          "flakes",
+          "checks-flake",
+          "packages",
+          "project-root"
+        ]
+      },
+      "locked": {
+        "path": "../apps",
+        "type": "path"
+      },
+      "original": {
+        "path": "../apps",
+        "type": "path"
+      },
+      "parent": [
+        "flakes",
+        "checks-flake",
+        "packages"
+      ]
+    },
     "apps-flake": {
       "inputs": {
         "nixpkgs": [
@@ -23,6 +52,32 @@
         "flakes"
       ]
     },
+    "apps_2": {
+      "inputs": {
+        "nixpkgs": [
+          "flakes",
+          "packages-flake",
+          "nixpkgs"
+        ],
+        "project-root": [
+          "flakes",
+          "packages-flake",
+          "project-root"
+        ]
+      },
+      "locked": {
+        "path": "../apps",
+        "type": "path"
+      },
+      "original": {
+        "path": "../apps",
+        "type": "path"
+      },
+      "parent": [
+        "flakes",
+        "packages-flake"
+      ]
+    },
     "checks-flake": {
       "inputs": {
         "crane": [
@@ -33,6 +88,7 @@
           "flakes",
           "nixpkgs"
         ],
+        "packages": "packages",
         "project-root": [
           "flakes",
           "project-root"
@@ -130,11 +186,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1763934636,
-        "narHash": "sha256-9glbI7f1uU+yzQCq5LwLgdZqx6svOhZWkd4JRY265fc=",
+        "lastModified": 1764081664,
+        "narHash": "sha256-sUoHmPr/EwXzRMpv1u/kH+dXuvJEyyF2Q7muE+t0EU4=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "ee09932cedcef15aaf476f9343d1dea2cb77e261",
+        "rev": "dc205f7b4fdb04c8b7877b43edb7b73be7730081",
         "type": "github"
       },
       "original": {
@@ -144,8 +200,41 @@
         "type": "github"
       }
     },
+    "packages": {
+      "inputs": {
+        "apps": "apps",
+        "crane": [
+          "flakes",
+          "checks-flake",
+          "crane"
+        ],
+        "nixpkgs": [
+          "flakes",
+          "checks-flake",
+          "nixpkgs"
+        ],
+        "project-root": [
+          "flakes",
+          "checks-flake",
+          "project-root"
+        ]
+      },
+      "locked": {
+        "path": "../packages",
+        "type": "path"
+      },
+      "original": {
+        "path": "../packages",
+        "type": "path"
+      },
+      "parent": [
+        "flakes",
+        "checks-flake"
+      ]
+    },
     "packages-flake": {
       "inputs": {
+        "apps": "apps_2",
         "crane": [
           "flakes",
           "crane"
