@@ -19,7 +19,6 @@
     let
       # Use helpers from lib-flake (shared via router)
       systems = lib-flake.lib.systems;
-      pkgsFor = lib-flake.lib.pkgsFor;
       perSystem = lib-flake.lib.perSystem;
       lib = nixpkgs.lib;
     in
@@ -35,27 +34,23 @@
           inputsDir = "${self}/inputs";
 
           # Tooling packages
+          # Note: Some tools are available via other flakes:
+          #   - nixpkgs-fmt: use `nix fmt` (formatter flake)
+          #   - clippy/tests: available via `nix build .#clippy` (packages flake)
           tooling = with pkgs; [
-            # Rust toolchain
+            # Rust toolchain (needed for interactive development and IDE support)
             rustc
             cargo
             rustfmt
             clippy
             rust-analyzer
 
-            # Build dependencies (matching root flake)
+            # Build dependencies (needed to compile the project)
             libgit2
             pkg-config
 
-            # Development tools
+            # Essential development tools
             git
-            just # Task runner (optional, but useful)
-
-            # Linting and formatting
-            nixpkgs-fmt # For formatting flake.nix files
-
-            # Testing and debugging
-            gdb # Debugger
           ];
 
           # Environment variables

@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # Shell hook for the development environment
+# Source environment variables from inputs/env.sh
+source "${inputsDir}/env.sh"
+
 # Display help text with variable substitution
 cat <<EOF
 🔧 lima-devshell development environment
@@ -19,8 +22,10 @@ Available commands:
   cargo update          - Update dependencies (updates Cargo.lock)
 
 Nix commands:
-  nix fmt               - Format all nix files
-  nix flake check       - Check flake validity
+  nix fmt               - Format all files (Nix, Rust, shell) via formatter flake
+  nix flake check       - Run all checks via checks flake
+  nix build .#clippy    - Run clippy via packages flake
+  nix build .#tests     - Run tests via packages flake
 
 Cargo locking:
   Cargo.lock is managed by cargo in the project root
