@@ -149,14 +149,15 @@ fn create_lima_instance(instance_name: &str, config_path: &Path) -> Result<bool>
         .to_str()
         .context("Lima config path contains invalid UTF-8")?;
 
-    // Use --yes to skip the "Do you want to start the instance now?" prompt
-    // Answer "n" via echo to skip starting during create (we'll start separately)
+    // Use --yes (--tty=false) to disable TTY and pipe "n" to skip starting during create
+    // We'll start separately after creation
     let status = Command::new("sh")
         .arg("-c")
         .arg(format!(
-            "echo 'n' | limactl create --yes --name {} {}",
+            "printf 'n\\n' | limactl create --yes --name {} {}",
             instance_name, config_path_str
         ))
+        .stdin(Stdio::null())
         .status()
         .context("failed to execute limactl create")?;
 
