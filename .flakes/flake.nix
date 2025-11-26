@@ -67,8 +67,9 @@
       # Packages output: packages.${system} structure
       # Also include checks as packages so they can be built with nix build .#checks.<name>
       packages = forAllSystems (system: 
-        packages-flake.${system}.packages // 
-        lib.mapAttrs' (name: value: lib.nameValuePair "checks.${name}" value) checks-flake.${system}.checks
+        packages-flake.${system}.packages // {
+          checks = checks-flake.${system}.checks;
+        }
       );
     };
 }
