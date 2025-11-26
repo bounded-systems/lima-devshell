@@ -1,0 +1,42 @@
+#!/bin/sh
+# <limactl-desc>Enter Lima dev environment from a valid Git worktree. Automatically manages Lima instances for Nix devshell development.</limactl-desc>
+set -eu
+
+# Lima CLI plugin wrapper for lima-devshell
+# This allows lima-devshell to be used as: limactl devshell
+#
+# Installation:
+#   ln -s /path/to/lima-devshell/limactl-devshell /usr/local/bin/limactl-devshell
+#   # or install via Home Manager (see README)
+
+# Find the lima-devshell binary
+# Try multiple locations in order of preference:
+# 1. Same directory as this script (for development)
+# 2. Standard installation paths
+# 3. PATH
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+BINARY_NAME="lima-devshell"
+
+# Check if binary is in the same directory as this script
+if [ -x "$SCRIPT_DIR/$BINARY_NAME" ]; then
+    exec "$SCRIPT_DIR/$BINARY_NAME" "$@"
+fi
+
+# Try to find in PATH
+if command -v "$BINARY_NAME" >/dev/null 2>&1; then
+    exec "$BINARY_NAME" "$@"
+fi
+
+# Try common installation paths
+for prefix in /usr/local /opt/homebrew ~/.local; do
+    if [ -x "$prefix/bin/$BINARY_NAME" ]; then
+        exec "$prefix/bin/$BINARY_NAME" "$@"
+    fi
+done
+
+# If we get here, binary not found
+echo "limactl-devshell: error: lima-devshell binary not found" >&2
+echo "limactl-devshell: please install lima-devshell or ensure it's in your PATH" >&2
+exit 1
+

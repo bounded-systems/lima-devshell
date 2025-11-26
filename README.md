@@ -37,7 +37,25 @@ cd /worktrees/io.github/pushd/percy/COMMERCE-4873
 nix develop .
 ```
 
-### From macOS (via lima-devshell command)
+### From macOS
+
+#### Option 1: As a Lima CLI Plugin (Recommended)
+
+Install the plugin wrapper to use `lima-devshell` as a Lima plugin:
+
+```bash
+# Install the plugin wrapper
+ln -s /path/to/lima-devshell/limactl-devshell /usr/local/bin/limactl-devshell
+# or via Home Manager (see Installation section)
+
+# Then use it as a Lima plugin
+cd ~/.local/state/git/worktrees/io.github/pushd/percy/COMMERCE-4873
+limactl devshell  # Automatically enters Lima and runs nix develop
+```
+
+The plugin will appear in `limactl --help` under "Available Plugins (Experimental)".
+
+#### Option 2: Direct Command
 
 The `lima-devshell` command (defined in Home Manager) automatically:
 1. Validates you're in a Git worktree under `~/.local/state/git/worktrees/`
@@ -348,6 +366,46 @@ To use MCP tools with your Lima instances:
 3. **Use the MCP tools** through your AI agent. The tools will operate within the VM's sandbox, providing secure file access and command execution.
 
 For more details, see the [Lima MCP Tools Documentation](https://lima-vm.io/docs/config/ai/outside/mcp/).
+
+## Lima CLI Plugin Support
+
+This project includes a Lima CLI plugin wrapper (`limactl-devshell`) that allows `lima-devshell` to be used as a native Lima plugin. This is the **recommended long-term approach** for better integration with Lima's ecosystem.
+
+### Plugin Features
+
+- **Automatic Discovery**: Appears in `limactl --help` under "Available Plugins"
+- **Native Integration**: Works seamlessly with Lima's plugin system
+- **Consistent Interface**: Uses `limactl devshell` instead of a separate command
+- **Description Support**: Plugin description is shown in help output
+
+### Installation as Plugin
+
+#### Manual Installation
+
+```bash
+# Create symlink to plugin wrapper
+ln -s /path/to/lima-devshell/limactl-devshell /usr/local/bin/limactl-devshell
+
+# Verify it works
+limactl --help  # Should show "devshell" in Available Plugins section
+limactl devshell --help  # Should show lima-devshell help
+```
+
+#### Via Home Manager (Future)
+
+The Home Manager configuration can be updated to install the plugin wrapper automatically. This will be added in a future update.
+
+### Migration Path
+
+**Current State**: `lima-devshell` works as a standalone command  
+**Future State**: `limactl devshell` will be the primary interface
+
+Both interfaces will continue to work during the transition period. The plugin approach provides:
+- Better discoverability (`limactl --help` shows all plugins)
+- Consistent naming with other Lima commands
+- Integration with Lima's plugin ecosystem
+
+For more details on Lima plugins, see the [Lima CLI Plugins Documentation](https://lima-vm.io/docs/config/plugin/cli/).
 
 ## Repository Structure
 
