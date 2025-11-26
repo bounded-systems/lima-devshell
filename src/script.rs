@@ -22,13 +22,13 @@ fn load_static_config() -> StaticConfig {
     {
         // Include the config file that was generated at build time
         const EMBEDDED_CONFIG: &str = include_str!("lima-devshell-config.json");
-        
+
         // Try to parse the embedded config, fallback if it fails
         if let Ok(config) = serde_json::from_str::<StaticConfig>(EMBEDDED_CONFIG) {
             return config;
         }
     }
-    
+
     // Fallback: try environment variables, then defaults
     // This is used when:
     // 1. Building locally without the config file (cargo build)
@@ -61,7 +61,7 @@ fn get_bootstrap_github_url() -> String {
 pub fn build_guest_script(ctx: &AppContext) -> String {
     let bootstrap_path = get_bootstrap_flake_path();
     let bootstrap_github = get_bootstrap_github_url();
-    
+
     // Note: We use {{ to escape { in the format string, and }} to escape }
     // For bash ${1:-default}, we need ${{1:-{}}} to get ${1:-default} in output
     format!(
