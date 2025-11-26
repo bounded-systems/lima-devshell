@@ -1,5 +1,5 @@
 # This flake owns only the `packages` output space.
-# It may depend on: nixpkgs, crane, project-root, lib-flake, meta-flake.
+# It may depend on: nixpkgs, crane, source, lib-flake, meta-flake.
 # It must not import from other .flakes/* directories.
 # All cross-space composition happens in .flakes/flake.nix (the router).
 #
@@ -10,12 +10,15 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     crane.url = "github:ipetkov/crane";
-    # Project root path (git repo root) - non-flake path input
+    # Source code path - non-flake path input
     # Required input, must be passed from parent flake via follows
-    project-root.flake = false;
+    source.flake = false;
+    # Inputs directory - static files (templates, scripts)
+    inputs.url = "path:./inputs";
+    inputs.flake = false;
   };
 
-  outputs = { self, nixpkgs, crane, project-root }:
+  outputs = { self, nixpkgs, crane, source, inputs }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       # Import nixpkgs for lib access
@@ -30,14 +33,18 @@
             inherit system;
             config.allowUnfree = true;
           };
-          # Project root from input
-          projectRoot = toString project-root;
+          
+          # Source path from input
+          sourcePath = toString source;
+          
+          # Inputs directory path (relative to flake source)
+          inputsDir = "${self}/inputs";
 
           # Initialize crane using mkLib
           craneLib = crane.mkLib pkgs;
 
           # Filter source files (excludes vendor, target, etc.)
-          src = craneLib.cleanCargoSource (craneLib.path projectRoot);
+          src = craneLib.cleanCargoSource (craneLib.path sourcePath);
 
           # Generate static config file using impure-flakes-prep pattern
           # This reads from environment variables at build time and creates a static JSON file
@@ -77,7 +84,7 @@
         in
         rec {
           # Build the lima-devshell Rust binary using crane
-          # Crane automatically fetches dependencies from crates.io using Cargo.lock
+          # Crane automatically fetches dependencies from crates.io
           lima-devshell = craneLib.buildPackage commonArgs;
 
           # Build clippy for offline usage
@@ -98,43 +105,11 @@
           # Generate lima.yaml template file
           # This is a template YAML file that can be used as a reference
           # The actual YAML is generated dynamically by lima-devshell at runtime
+          # Template is read from static inputs directory
           lima-devshell-yaml = pkgs.writeTextFile {
             name = "lima-devshell-yaml";
             destination = "/lima.yaml";
-            text = ''
-              # Lima instance for lima-devshell development
-              # This is a template - actual values are generated dynamically by lima-devshell
-              vmType: vz
-              arch: aarch64
-              images:
-              - location: https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64.img
-                arch: aarch64
-              mounts:
-              - location: /Users/USER/.local/state/git/worktrees/REPO/WORKTREE
-                mountPoint: /worktrees/REPO/WORKTREE
-                writable: true
-              - location: /Users/USER/.local/share/git/bare/REPO.git/worktrees
-                mountPoint: /git/bare/worktrees
-                writable: true
-              memory: 6GiB
-              cpus: 4
-              disk: 80GiB
-              ssh:
-                localPort: 0
-                loadDotSSHPubKeys: true
-              env:
-                LIMA_WORKDIR_DISABLED: '1'
-              provision:
-              - mode: system
-                script: |
-                  #!/bin/sh
-                  # Create user if not present
-                  if ! id dev >/dev/null 2>&1; then
-                    useradd -m -s /bin/bash dev
-                    passwd -d dev
-                    usermod -aG sudo dev
-                  fi
-            '';
+            text = builtins.readFile (inputsDir + "/lima.yaml.template");
           };
 
           # Test script to verify all packages and checks build successfully

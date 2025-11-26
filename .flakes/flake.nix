@@ -24,18 +24,20 @@
     routes-core.url = "path:./routes";
 
     # Project root path (git repo root) - non-flake path input
-    # Default to parent directory for standalone use, overridden by parent via follows
+    # Defaults to parent directory, but only used if it contains a Rust project (Cargo.toml)
+    # When run standalone, packages will check if project-root exists and has Cargo.toml before building
+    # When called from parent flake, project-root is overridden via follows
     project-root.url = "path:..";
     project-root.flake = false;
 
-    # Share nixpkgs and project-root with routes-core
+    # Share nixpkgs and project-root with routes-core (if project-root is provided)
     routes-core.inputs.nixpkgs.follows = "nixpkgs";
     routes-core.inputs.project-root.follows = "project-root";
 
     # Apps flake
     apps-flake.url = "path:./apps";
 
-    # Share nixpkgs and project-root with apps flake
+    # Share nixpkgs and project-root with apps flake (if project-root is provided)
     apps-flake.inputs.nixpkgs.follows = "nixpkgs";
     apps-flake.inputs.project-root.follows = "project-root";
 
@@ -55,9 +57,9 @@
     # Packages flake
     packages-flake.url = "path:./packages";
 
-    # Share nixpkgs, project-root, and crane with packages flake
+    # Share nixpkgs, source, and crane with packages flake
     packages-flake.inputs.nixpkgs.follows = "nixpkgs";
-    packages-flake.inputs.project-root.follows = "project-root";
+    packages-flake.inputs.source.follows = "project-root";
     packages-flake.inputs.crane.follows = "crane";
 
     # Lib flake - pure helper library
