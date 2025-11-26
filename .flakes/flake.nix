@@ -67,8 +67,30 @@
       # Packages output: packages.${system} structure
       # Also include checks as packages so they can be built with nix build .#checks.<name>
       packages = forAllSystems (system: 
-        packages-flake.${system}.packages // {
-          checks = checks-flake.${system}.checks;
+        let
+          pkgs = pkgsFor system;
+          allPackages = packages-flake.${system}.packages;
+          allChecks = checks-flake.${system}.checks;
+          # Create an "all" package that builds everything
+          all = pkgs.symlinkJoin {
+            name = "all";
+            paths = lib.attrValues allPackages ++ lib.attrValues allChecks;
+            # Create a manifest file listing what was built
+            postBuild = ''
+              echo "Built all packages and checks:" > $out/MANIFEST.txt
+              echo "" >> $out/MANIFEST.txt
+              echo "Packages:" >> $out/MANIFEST.txt
+              ${lib.concatMapStringsSep "\n" (pkg: "echo '  - ${pkg.name}' >> $out/MANIFEST.txt") (lib.attrValues allPackages)}
+              echo "" >> $out/MANIFEST.txt
+              echo "Checks:" >> $out/MANIFEST.txt
+              ${lib.concatMapStringsSep "\n" (check: "echo '  - ${check.name}' >> $out/MANIFEST.txt") (lib.attrValues allChecks)}
+            '';
+          };
+        in
+        allPackages // {
+          checks = allChecks;
+          # Override default to build everything
+          default = all;
         }
       );
     };
