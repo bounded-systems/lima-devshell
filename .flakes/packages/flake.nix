@@ -33,10 +33,10 @@
             inherit system;
             config.allowUnfree = true;
           };
-          
+
           # Source path from input
           sourcePath = toString source;
-          
+
           # Inputs directory path (relative to flake source)
           inputsDir = "${self}/inputs";
 

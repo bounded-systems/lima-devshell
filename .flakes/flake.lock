@@ -132,6 +132,20 @@
         "checks-flake"
       ]
     },
+    "inputs_2": {
+      "flake": false,
+      "locked": {
+        "path": "./inputs",
+        "type": "path"
+      },
+      "original": {
+        "path": "./inputs",
+        "type": "path"
+      },
+      "parent": [
+        "packages-flake"
+      ]
+    },
     "lib-flake": {
       "inputs": {
         "flake-utils": [
@@ -172,10 +186,11 @@
         "crane": [
           "crane"
         ],
+        "inputs": "inputs_2",
         "nixpkgs": [
           "nixpkgs"
         ],
-        "project-root": [
+        "source": [
           "project-root"
         ]
       },
