@@ -105,11 +105,11 @@
           # Generate lima.yaml template file
           # This is a template YAML file that can be used as a reference
           # The actual YAML is generated dynamically by lima-devshell at runtime
-          # Template is read from static inputs directory
+          # Template is read from source directory
           lima-devshell-yaml = pkgs.writeTextFile {
             name = "lima-devshell-yaml";
             destination = "/lima.yaml";
-            text = builtins.readFile (inputsDir + "/lima.yaml.template");
+            text = builtins.readFile (sourcePath + "/lima-devshell-template.yaml");
           };
 
           # Test script to verify packages build successfully

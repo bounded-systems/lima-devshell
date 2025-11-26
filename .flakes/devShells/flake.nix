@@ -9,9 +9,12 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    # Inputs directory - static files only (shell hooks, templates, etc.)
+    inputs.url = "path:./inputs";
+    inputs.flake = false;
   };
 
-  outputs = { self, nixpkgs }:
+  outputs = { self, nixpkgs, inputs }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
       # Import nixpkgs for lib access
@@ -27,7 +30,10 @@
             config.allowUnfree = true;
           };
 
-          # Tooling packages (merged from config/tooling)
+          # Inputs directory path (relative to flake source)
+          inputsDir = "${self}/inputs";
+
+          # Tooling packages
           tooling = with pkgs; [
             # Rust toolchain
             rustc
@@ -51,7 +57,7 @@
             gdb # Debugger
           ];
 
-          # Environment variables (merged from config/env)
+          # Environment variables
           env = {
             # Rust development environment
             RUST_BACKTRACE = "1";
@@ -62,40 +68,8 @@
             # No need to set CARGO_HOME - let cargo use default or system location
           };
 
-          # Shell hook (display help text with variable substitution)
-          shellHook = ''
-            # Display help text with variable substitution
-            cat <<EOF
-            🔧 lima-devshell development environment
-            Rust: $(rustc --version)
-            Cargo: $(cargo --version)
-
-            Environment:
-              RUST_BACKTRACE=$RUST_BACKTRACE
-              RUST_LOG=$RUST_LOG
-
-            Available commands:
-              cargo build          - Build the project
-              cargo build --release - Build release binary
-              cargo test            - Run tests
-              cargo clippy          - Run clippy linter
-              cargo fmt             - Format code
-              cargo update          - Update dependencies (updates Cargo.lock)
-
-            Nix commands:
-              nix fmt               - Format all nix files
-              nix flake check       - Check flake validity
-
-            Cargo locking:
-              Cargo.lock is managed by cargo in the project root
-              Run 'cargo update' to update dependencies and lock file
-              Cargo.lock is gitignored - cargo manages it during builds
-
-            To test the flake build (from project root):
-              nix build
-
-            EOF
-          '';
+          # Shell hook (read from inputs/shell-hook.sh - static file only)
+          shellHook = builtins.readFile (inputsDir + "/shell-hook.sh");
         in
         {
           default = pkgs.mkShell {
