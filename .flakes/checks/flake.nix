@@ -77,6 +77,11 @@
             inherit cargoArtifacts;
             cargoClippyExtraArgs = "--all-targets -- -D warnings";
           });
+
+          # Run Rust unit tests
+          rust-tests = craneLib.cargoTest (commonArgs // {
+            inherit cargoArtifacts;
+          });
         };
       }
     );

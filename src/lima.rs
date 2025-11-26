@@ -63,7 +63,13 @@ struct LimaConfig {
 }
 
 /// Generate Lima YAML configuration from instance model
-fn generate_lima_yaml(instance: &InstanceModel) -> Result<String> {
+#[cfg(test)]
+pub fn generate_lima_yaml(instance: &InstanceModel) -> Result<String> {
+    generate_lima_yaml_impl(instance)
+}
+
+/// Internal implementation of YAML generation
+fn generate_lima_yaml_impl(instance: &InstanceModel) -> Result<String> {
     let config = LimaConfig {
         vm_type: VM_TYPE.to_string(),
         arch: ARCH.to_string(),
@@ -120,7 +126,7 @@ fi
 
 /// Write Lima YAML configuration to a specific path
 fn write_lima_yaml(instance: &InstanceModel, yaml_path: &Path) -> Result<()> {
-    let yaml_content = generate_lima_yaml(instance)?;
+    let yaml_content = generate_lima_yaml_impl(instance)?;
     std::fs::write(yaml_path, yaml_content).context("failed to write Lima YAML configuration")?;
     Ok(())
 }
@@ -143,46 +149,35 @@ fn is_instance_running(instance_name: &str) -> Result<bool> {
     Ok(socket_path.exists())
 }
 
-/// Create a Lima instance from a YAML file
-/// Returns true if the instance was started by create, false otherwise
-fn create_lima_instance(instance_name: &str, config_path: &Path) -> Result<bool> {
+/// Start a Lima instance from a YAML file
+/// This will create the instance if it doesn't exist, or start it if it exists but is stopped.
+/// Uses --tty=false (via --yes) to ensure non-interactive operation.
+fn start_lima_instance_with_yaml(instance_name: &str, config_path: &Path) -> Result<()> {
     let config_path_str = config_path
         .to_str()
         .context("Lima config path contains invalid UTF-8")?;
 
-    // Always use expect to handle prompts reliably
-    // Even with --yes, limactl may still prompt when run from Rust due to TTY detection
-    // expect ensures we can answer "n" to skip starting the instance during create
-    let expect_script = format!(
-        r#"#!/usr/bin/expect -f
-set timeout 300
-spawn limactl create --yes --name {} {}
-expect {{
-    "Do you want to start the instance now?" {{
-        send "n\r"
-        exp_continue
-    }}
-    eof
-}}
-wait
-"#,
-        instance_name, config_path_str
-    );
-
-    let status = Command::new("expect")
-        .arg("-c")
-        .arg(&expect_script)
+    // Use limactl start with YAML file - this will create if needed and start the instance
+    // --yes (alias for --tty=false) ensures non-interactive operation with no prompts
+    // This is the recommended automation pattern per Lima docs
+    let status = Command::new("limactl")
+        .args([
+            "start",
+            "--yes", // Non-interactive mode, no prompts
+            "--name",
+            instance_name,
+            config_path_str, // Path to YAML file
+        ])
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .status()
-        .context("failed to execute expect script")?;
+        .context("failed to execute limactl start")?;
 
     if !status.success() {
-        anyhow::bail!("failed to create Lima instance");
+        anyhow::bail!("failed to start Lima instance");
     }
 
-    // Instance was created but not started (we answered "n")
-    Ok(false)
+    Ok(())
 }
 
 /// Delete a Lima instance
@@ -199,7 +194,8 @@ fn delete_lima_instance(instance_name: &str) -> Result<()> {
     Ok(())
 }
 
-/// Start a Lima instance by name
+/// Start a Lima instance by name (for instances that already exist)
+/// Uses --tty=false (via --yes) to ensure non-interactive operation.
 fn start_lima_instance(instance_name: &str) -> Result<()> {
     let status = Command::new("limactl")
         .args(["start", "--yes", instance_name])
@@ -296,17 +292,14 @@ pub fn ensure_instance(instance: &InstanceModel, worktree_dir: &Path) -> Result<
         delete_lima_instance(&instance.name)?;
     }
 
-    // Create and start the instance with fresh configuration
+    // Start the instance with YAML file - this will create if needed and start it
+    // Using limactl start with YAML is the recommended automation pattern
+    // It handles both "create if needed" and "start if stopped" in one command
     println!(
-        "lima-devshell: creating Lima instance '{}'...",
+        "lima-devshell: ensuring Lima instance '{}' is created and running...",
         instance.name
     );
-    let was_started = create_lima_instance(&instance.name, &local_yaml_path)?;
-
-    // Only start if create didn't start it (we answered "n" to the prompt)
-    if !was_started {
-        start_lima_instance(&instance.name)?;
-    }
+    start_lima_instance_with_yaml(&instance.name, &local_yaml_path)?;
 
     // Wait for the instance to be fully ready (guest agent connected)
     wait_for_instance_ready(&instance.name, 60)?;
@@ -328,4 +321,112 @@ pub fn enter_devshell(instance: &InstanceModel, ctx: &AppContext) -> Result<()> 
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::InstanceModel;
+    use std::path::PathBuf;
+
+    fn create_test_instance() -> InstanceModel {
+        InstanceModel {
+            name: "test-instance".to_string(),
+            worktree_mount_host: PathBuf::from("/Users/test/worktree"),
+            worktree_mount_guest: "/worktrees/test/repo".to_string(),
+            bare_repo_mount_host: PathBuf::from("/Users/test/bare.git"),
+            bare_repo_mount_guest: "/git/bare/worktrees".to_string(),
+            repo_name: "test-repo".to_string(),
+        }
+    }
+
+    #[test]
+    fn test_generate_lima_yaml_structure() {
+        let instance = create_test_instance();
+        let yaml = generate_lima_yaml(&instance).expect("should generate YAML");
+
+        // Verify YAML contains expected fields
+        assert!(yaml.contains("vmType: vz"));
+        assert!(yaml.contains("arch: aarch64"));
+        assert!(yaml.contains("memory: 6GiB"));
+        assert!(yaml.contains("cpus: 4"));
+        assert!(yaml.contains("disk: 80GiB"));
+        assert!(yaml.contains("localPort: 0"));
+        assert!(yaml.contains("LIMA_WORKDIR_DISABLED"));
+        assert!(yaml.contains("test-repo")); // repo name in comment
+    }
+
+    #[test]
+    fn test_generate_lima_yaml_mounts() {
+        let instance = create_test_instance();
+        let yaml = generate_lima_yaml(&instance).expect("should generate YAML");
+
+        // Verify mounts are present
+        assert!(yaml.contains("/Users/test/worktree"));
+        assert!(yaml.contains("/worktrees/test/repo"));
+        assert!(yaml.contains("/Users/test/bare.git"));
+        assert!(yaml.contains("writable: true"));
+    }
+
+    #[test]
+    fn test_generate_lima_yaml_provision() {
+        let instance = create_test_instance();
+        let yaml = generate_lima_yaml(&instance).expect("should generate YAML");
+
+        // Verify provision script is present
+        assert!(yaml.contains("mode: system"));
+        assert!(yaml.contains("useradd"));
+        assert!(yaml.contains("dev"));
+    }
+
+    #[test]
+    fn test_generate_lima_yaml_valid_yaml() {
+        let instance = create_test_instance();
+        let yaml = generate_lima_yaml(&instance).expect("should generate YAML");
+
+        // Verify it's valid YAML by parsing it
+        let parsed: Result<LimaConfig, _> = serde_yaml::from_str(&yaml);
+        assert!(
+            parsed.is_ok(),
+            "Generated YAML should be valid: {:?}",
+            parsed.err()
+        );
+
+        let config = parsed.unwrap();
+        assert_eq!(config.vm_type, "vz");
+        assert_eq!(config.arch, "aarch64");
+        assert_eq!(config.memory, "6GiB");
+        assert_eq!(config.cpus, 4);
+        assert_eq!(config.ssh.local_port, 0);
+        assert!(config.ssh.load_dot_ssh_pub_keys);
+        assert_eq!(config.mounts.len(), 2);
+        assert_eq!(config.provision.len(), 1);
+    }
+
+    #[test]
+    fn test_generate_lima_yaml_ssh_config() {
+        let instance = create_test_instance();
+        let yaml = generate_lima_yaml(&instance).expect("should generate YAML");
+
+        // Verify SSH config uses non-interactive defaults
+        // localPort: 0 means auto-assign (good for automation)
+        let parsed: LimaConfig = serde_yaml::from_str(&yaml).expect("valid YAML");
+        assert_eq!(parsed.ssh.local_port, 0, "localPort should be 0 for auto-assign");
+        assert!(
+            parsed.ssh.load_dot_ssh_pub_keys,
+            "loadDotSSHPubKeys should be true"
+        );
+    }
+
+    #[test]
+    fn test_generate_lima_yaml_env_vars() {
+        let instance = create_test_instance();
+        let yaml = generate_lima_yaml(&instance).expect("should generate YAML");
+
+        let parsed: LimaConfig = serde_yaml::from_str(&yaml).expect("valid YAML");
+        assert_eq!(
+            parsed.env.get("LIMA_WORKDIR_DISABLED"),
+            Some(&"1".to_string())
+        );
+    }
 }
