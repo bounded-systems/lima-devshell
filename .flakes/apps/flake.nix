@@ -526,6 +526,151 @@
               echo "✓ All flakes locked successfully"
             '');
           };
+
+          # Graph-aware flake lock refresh tool with schema validation
+          # Uses flake.lock schema to validate structure and classify nodes
+          graph-refresh = {
+            type = "app";
+            meta = {
+              description = "Graph-aware flake lock refresh with schema validation";
+            };
+            program = toString (pkgs.writeShellScript "graph-refresh" ''
+              set -euo pipefail
+
+              PROJECT_ROOT="''${PROJECT_ROOT:-$PWD}"
+              cd "$PROJECT_ROOT" || { echo "Error: Cannot access project root" >&2; exit 1; }
+              PROJECT_ROOT=$(pwd)
+
+              export PATH="${pkgs.jq}/bin:${pkgs.python3}/bin:${pkgs.nix}/bin:$PATH"
+
+              GROUP=""
+              SUBTREE=""
+              DRY_RUN=false
+              VALIDATE_ONLY=false
+
+              while [[ $# -gt 0 ]]; do
+                case $1 in
+                  --group) GROUP="$2"; shift 2 ;;
+                  --subtree) SUBTREE="$2"; shift 2 ;;
+                  --dry-run) DRY_RUN=true; shift ;;
+                  --validate-only) VALIDATE_ONLY=true; shift ;;
+                  *) echo "Unknown option: $1"; exit 1 ;;
+                esac
+              done
+
+              FLAKE_LOCK="$PROJECT_ROOT/flake.lock"
+              POLICY_FILE="$PROJECT_ROOT/.flakes/graph-policy.json"
+              SCHEMA_FILE="$PROJECT_ROOT/.flakes/flake-lock-schema.json"
+
+              if [ ! -f "$FLAKE_LOCK" ]; then
+                echo "Error: flake.lock not found"
+                exit 1
+              fi
+
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo "  Flake Graph Refresh Tool"
+              echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+              echo ""
+
+              # Validate against schema
+              if [ -f "$SCHEMA_FILE" ] && python3 -c "import jsonschema" 2>/dev/null; then
+                echo "Validating flake.lock against schema..."
+                python3 <<'PYTHON_EOF'
+import json
+import sys
+try:
+    import jsonschema
+    with open("$SCHEMA_FILE", "r") as f:
+        schema = json.load(f)
+    with open("$FLAKE_LOCK", "r") as f:
+        lock_data = json.load(f)
+    jsonschema.validate(instance=lock_data, schema=schema)
+    print("  ✓ Schema validation passed")
+except ImportError:
+    print("  ⚠ jsonschema not available, skipping validation")
+except jsonschema.ValidationError as e:
+    print(f"  ✗ Schema validation failed: {e.message}")
+    sys.exit(1)
+PYTHON_EOF
+              fi
+
+              if [ "$VALIDATE_ONLY" = true ]; then
+                exit 0
+              fi
+
+              # Classify nodes
+              NODES_JSON=$(jq -c '.nodes | to_entries | map({
+                name: .key,
+                type: .value.locked.type,
+                isInternal: (.value.locked.type == "path"),
+                isExternal: (.value.locked.type | IN("git", "github", "gitlab", "tarball"))
+              })' "$FLAKE_LOCK")
+
+              # Determine inputs to update
+              UPDATE_INPUTS=()
+              if [ -n "$GROUP" ] && [ -f "$POLICY_FILE" ]; then
+                GROUP_INPUTS=$(jq -r --arg group "$GROUP" '.groups[$group] // [] | .[]' "$POLICY_FILE")
+                for input in $GROUP_INPUTS; do
+                  UPDATE_INPUTS+=("$input")
+                done
+              else
+                # Default: update all external nodes
+                for node in $(echo "$NODES_JSON" | jq -r '.[] | select(.isExternal == true) | .name'); do
+                  UPDATE_INPUTS+=("$node")
+                done
+              fi
+
+              if [ ${#UPDATE_INPUTS[@]} -eq 0 ]; then
+                echo "No inputs to update"
+                exit 0
+              fi
+
+              if [ "$DRY_RUN" = true ]; then
+                echo "Would update: ''${UPDATE_INPUTS[*]}"
+                exit 0
+              fi
+
+              # Update
+              LOCK_CMD="nix flake lock"
+              for input in "''${UPDATE_INPUTS[@]}"; do
+                LOCK_CMD="$LOCK_CMD --update-input $input"
+              done
+              eval "$LOCK_CMD"
+            '');
+          };
+
+          # Graph visualization tool
+          graph-show = {
+            type = "app";
+            meta = {
+              description = "Show flake input graph (json/mermaid/dot)";
+            };
+            program = toString (pkgs.writeShellScript "graph-show" ''
+              set -euo pipefail
+              FORMAT="''${1:-json}"
+              FLAKE_LOCK="''${PROJECT_ROOT:-$PWD}/flake.lock"
+              export PATH="${pkgs.jq}/bin:$PATH"
+              
+              case "$FORMAT" in
+                json)
+                  jq '.nodes | to_entries | map({
+                    name: .key,
+                    type: .value.locked.type,
+                    classification: (if .value.locked.type == "path" then "internal" else "external" end),
+                    inputs: (.value.inputs // {} | keys)
+                  })' "$FLAKE_LOCK"
+                  ;;
+                mermaid)
+                  echo "graph TD"
+                  jq -r '.nodes | to_entries[] | (.value.inputs // {} | to_entries[] | "\(.key) --> \(.value)")' "$FLAKE_LOCK"
+                  ;;
+                *)
+                  echo "Unknown format: $FORMAT (supported: json, mermaid)"
+                  exit 1
+                  ;;
+              esac
+            '');
+          };
         });
     };
 }

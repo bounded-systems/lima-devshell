@@ -88,6 +88,71 @@
             inherit cargoArtifacts;
           });
 
+          # Graph structure check: validate flake.lock graph and ensure isolation
+          # Uses schema validation and checks that all .flakes/* nodes are internal path nodes
+          graph-structure-check = pkgs.runCommand "graph-structure-check"
+            {
+              nativeBuildInputs = with pkgs; [ jq python3 ];
+            } ''
+            cd ${projectRoot}
+            echo "Checking flake graph structure..."
+            
+            FLAKE_LOCK="./flake.lock"
+            SCHEMA_FILE="./.flakes/flake-lock-schema.json"
+            
+            if [ ! -f "$FLAKE_LOCK" ]; then
+              echo "Error: flake.lock not found"
+              exit 1
+            fi
+            
+            # Validate against schema if available
+            if [ -f "$SCHEMA_FILE" ] && python3 -c "import jsonschema" 2>/dev/null; then
+              python3 <<'PYTHON_EOF'
+import json
+import sys
+try:
+    import jsonschema
+    with open("$SCHEMA_FILE", "r") as f:
+        schema = json.load(f)
+    with open("$FLAKE_LOCK", "r") as f:
+        lock_data = json.load(f)
+    jsonschema.validate(instance=lock_data, schema=schema)
+    print("  ✓ Schema validation passed")
+except ImportError:
+    print("  ⚠ jsonschema not available, skipping schema validation")
+except jsonschema.ValidationError as e:
+    print(f"  ✗ Schema validation failed: {e.message}")
+    sys.exit(1)
+PYTHON_EOF
+            fi
+            
+            # Check that all .flakes/* nodes are internal path nodes
+            VIOLATIONS=0
+            for node_name in $(jq -r '.nodes | keys[]' "$FLAKE_LOCK" | grep -E '^(apps|checks|packages|devShells|formatter|lib|overlays|templates)-flake$'); do
+              NODE_TYPE=$(jq -r --arg name "$node_name" '.nodes[$name].locked.type' "$FLAKE_LOCK")
+              NODE_PATH=$(jq -r --arg name "$node_name" '.nodes[$name].locked.path // ""' "$FLAKE_LOCK")
+              
+              if [ "$NODE_TYPE" != "path" ]; then
+                echo "  ✗ VIOLATION: $node_name is type '$NODE_TYPE', expected 'path'"
+                echo "    All .flakes/* subflakes must be internal path nodes"
+                VIOLATIONS=$((VIOLATIONS + 1))
+              elif [[ ! "$NODE_PATH" =~ ^\.flakes/ ]]; then
+                echo "  ✗ VIOLATION: $node_name path '$NODE_PATH' is not under .flakes/"
+                VIOLATIONS=$((VIOLATIONS + 1))
+              fi
+            done
+            
+            if [ $VIOLATIONS -gt 0 ]; then
+              echo ""
+              echo "Found $VIOLATIONS violation(s). Graph structure check failed."
+              exit 1
+            fi
+            
+            echo "  ✓ All .flakes/* nodes are internal path nodes"
+            echo "  ✓ Graph structure is valid"
+            touch $out
+          '';
+
           # Structural check: detect cross-dir dependency violations
           # This ensures subflakes don't import from other .flakes/* directories
           # Only .flakes/flake.nix (the router) is allowed to import subflakes
