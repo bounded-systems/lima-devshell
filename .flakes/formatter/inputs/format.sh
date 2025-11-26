@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Run from the directory nix fmt is invoked in.
-project_root="${PROJECT_ROOT:-$PWD}"
+# Accept optional directory argument or use PROJECT_ROOT env var or current directory
+project_root="${1:-${PROJECT_ROOT:-$PWD}}"
+project_root="$(cd "$project_root" && pwd)"
 cd "$project_root"
+
+echo "Formatting files in: $project_root"
 
 echo "Formatting Nix files..."
 # Format all nix files including .flakes directory
@@ -26,5 +29,19 @@ if [ -f "Cargo.toml" ]; then
   fi
 else
   echo "No Cargo.toml found, skipping Rust formatting"
+fi
+
+echo "Formatting shell files..."
+# Format shell files (sh, bash, zsh)
+shell_file_count=$(find . -name "*.sh" -o -name "*.bash" -o -name "*.zsh" | wc -l | tr -d ' ')
+if [ "$shell_file_count" -gt 0 ]; then
+  echo "Found $shell_file_count shell file(s)"
+  find . \( -name "*.sh" -o -name "*.bash" -o -name "*.zsh" \) -type f -print0 | xargs -0 -r shfmt -w -s || {
+    echo "Warning: shfmt failed or made no changes" >&2
+    exit 0
+  }
+  echo "Shell formatting complete"
+else
+  echo "No shell files found, skipping shell formatting"
 fi
 

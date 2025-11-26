@@ -32,7 +32,7 @@
           # Helper to create a formatter app from a script
           mkFormatter = name: script: pkgs.writeShellApplication {
             inherit name;
-            runtimeInputs = with pkgs; [ nixpkgs-fmt cargo rustfmt findutils ];
+            runtimeInputs = with pkgs; [ nixpkgs-fmt cargo rustfmt findutils shfmt ];
             text = builtins.readFile script;
           };
         in
