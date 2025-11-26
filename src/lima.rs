@@ -11,13 +11,54 @@ use std::thread;
 use std::time::Duration;
 
 // Lima VM configuration constants
-pub const VM_TYPE: &str = "vz";
-pub const ARCH: &str = "aarch64";
-pub const UBUNTU_IMAGE_URL: &str =
-    "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64.img";
 pub const MEMORY: &str = "6GiB";
 pub const CPUS: u32 = 4;
 pub const DISK: &str = "80GiB";
+
+/// Detect the appropriate VM type based on the host machine
+/// - macOS (any): `vz` (best performance, native hypervisor)
+/// - Linux: `qemu` (standard for Linux hosts)
+/// - Windows: `wsl2` (if Lima supports it)
+fn detect_vm_type() -> &'static str {
+    match std::env::consts::OS {
+        "macos" => "vz",
+        "linux" => "qemu",
+        "windows" => "wsl2",
+        _ => "qemu", // Default fallback
+    }
+}
+
+/// Detect the appropriate architecture based on the host machine
+/// Maps host architecture to Lima VM architecture
+fn detect_arch() -> &'static str {
+    match std::env::consts::ARCH {
+        "aarch64" | "arm64" => "aarch64",
+        "x86_64" => "x86_64",
+        _ => "x86_64", // Default fallback
+    }
+}
+
+/// Get the Ubuntu cloud image URL based on the detected architecture
+fn get_ubuntu_image_url(arch: &str) -> String {
+    match arch {
+        "aarch64" => {
+            "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-arm64.img".to_string()
+        }
+        "x86_64" => {
+            "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img".to_string()
+        }
+        _ => {
+            "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img".to_string()
+        }
+    }
+}
+
+/// Determine if Rosetta should be enabled
+/// Rosetta is available for VZ instances on ARM hosts (macOS >= 13.0)
+/// It provides fast Intel-on-ARM emulation
+fn should_enable_rosetta(vm_type: &str) -> bool {
+    vm_type == "vz" && std::env::consts::OS == "macos" && detect_arch() == "aarch64"
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Image {
@@ -55,6 +96,13 @@ struct GuestAgent {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+struct Rosetta {
+    enabled: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    binfmt: Option<bool>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct LimaConfig {
     #[serde(rename = "vmType")]
     vm_type: String,
@@ -69,6 +117,8 @@ struct LimaConfig {
     provision: Vec<ProvisionStep>,
     #[serde(rename = "guestAgent", skip_serializing_if = "Option::is_none")]
     guest_agent: Option<GuestAgent>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    rosetta: Option<Rosetta>,
 }
 
 /// Generate Lima YAML configuration from instance model
@@ -79,12 +129,17 @@ pub fn generate_lima_yaml(instance: &InstanceModel) -> Result<String> {
 
 /// Internal implementation of YAML generation
 fn generate_lima_yaml_impl(instance: &InstanceModel) -> Result<String> {
+    let vm_type = detect_vm_type();
+    let arch = detect_arch();
+    let image_url = get_ubuntu_image_url(arch);
+    let enable_rosetta = should_enable_rosetta(vm_type);
+
     let config = LimaConfig {
-        vm_type: VM_TYPE.to_string(),
-        arch: ARCH.to_string(),
+        vm_type: vm_type.to_string(),
+        arch: arch.to_string(),
         images: vec![Image {
-            location: UBUNTU_IMAGE_URL.to_string(),
-            arch: ARCH.to_string(),
+            location: image_url,
+            arch: arch.to_string(),
         }],
         mounts: vec![
             Mount {
@@ -126,6 +181,14 @@ fi
             enabled: true,
             log_path: Some("/var/log/lima-guest-agent.log".to_string()),
         }),
+        rosetta: if enable_rosetta {
+            Some(Rosetta {
+                enabled: true,
+                binfmt: Some(true), // Register rosetta to /proc/sys/fs/binfmt_misc for container support
+            })
+        } else {
+            None
+        },
     };
 
     // Add comment header
@@ -430,9 +493,11 @@ mod tests {
         let instance = create_test_instance();
         let yaml = generate_lima_yaml(&instance).expect("should generate YAML");
 
-        // Verify YAML contains expected fields
-        assert!(yaml.contains("vmType: vz"));
-        assert!(yaml.contains("arch: aarch64"));
+        // Verify YAML contains expected fields (using detected host values)
+        let vm_type = detect_vm_type();
+        let arch = detect_arch();
+        assert!(yaml.contains(&format!("vmType: {}", vm_type)));
+        assert!(yaml.contains(&format!("arch: {}", arch)));
         assert!(yaml.contains("memory: 6GiB"));
         assert!(yaml.contains("cpus: 4"));
         assert!(yaml.contains("disk: 80GiB"));
@@ -478,8 +543,9 @@ mod tests {
         );
 
         let config = parsed.unwrap();
-        assert_eq!(config.vm_type, "vz");
-        assert_eq!(config.arch, "aarch64");
+        // Verify VM type and arch match detected host values
+        assert_eq!(config.vm_type, detect_vm_type());
+        assert_eq!(config.arch, detect_arch());
         assert_eq!(config.memory, "6GiB");
         assert_eq!(config.cpus, 4);
         assert_eq!(config.ssh.local_port, 0);
