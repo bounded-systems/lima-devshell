@@ -16,7 +16,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     crane.url = "github:ipetkov/crane";
     flake-utils.url = "github:numtide/flake-utils";
-    
+
     # Determinate Systems flake schemas for validation
     flake-schemas.url = "https://flakehub.com/f/DeterminateSystems/flake-schemas/*.tar.gz";
 
@@ -27,7 +27,7 @@
     # Default to parent directory for standalone use, overridden by parent via follows
     project-root.url = "path:..";
     project-root.flake = false;
-    
+
     # Share nixpkgs and project-root with routes-core
     routes-core.inputs.nixpkgs.follows = "nixpkgs";
     routes-core.inputs.project-root.follows = "project-root";
@@ -62,7 +62,7 @@
 
     # Lib flake - pure helper library
     lib-flake.url = "path:./lib";
-    
+
     # Share nixpkgs and flake-utils with lib flake
     lib-flake.inputs.nixpkgs.follows = "nixpkgs";
     lib-flake.inputs.flake-utils.follows = "flake-utils";
@@ -87,10 +87,10 @@
     {
       # Flake schemas for validation (Determinate Systems)
       schemas = flake-schemas.schemas;
-      
+
       # Lib output maps directly to lib subflake (not system-specific)
       lib = lib-flake.lib;
-      
+
       # Expose routing utilities for reference/validation
       routes = routeLib;
       # Apps output: direct re-export (Variant A - subflakes expose apps.${system} directly)

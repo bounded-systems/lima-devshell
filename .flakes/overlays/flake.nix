@@ -76,7 +76,7 @@
       # These are pure functions, not overlays themselves
       lib = {
         inherit combineOverlays addPackage overridePackage replacePackage addPackages;
-        
+
         # Example usage:
         # combineOverlays = self.overlays.lib.combineOverlays;
         # myOverlay = self.overlays.lib.addPackage "myTool" (prev.callPackage ./path { });

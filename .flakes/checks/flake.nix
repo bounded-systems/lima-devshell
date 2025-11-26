@@ -52,8 +52,7 @@
 
           # Check Rust code formatting
           rust-fmt-check = pkgs.runCommand "rust-fmt-check"
-            {
-            } ''
+            { } ''
             export PROJECT_ROOT="${projectRoot}"
             bash ${inputsDir}/rust-fmt-check.sh
             touch $out
@@ -61,8 +60,7 @@
 
           # Run clippy check (requires Rust toolchain in PATH)
           clippy-check = pkgs.runCommand "clippy-check"
-            {
-            } ''
+            { } ''
             export PROJECT_ROOT="${projectRoot}"
             bash ${inputsDir}/clippy-check.sh
             touch $out
@@ -70,8 +68,7 @@
 
           # Run Rust unit tests (requires Rust toolchain in PATH)
           rust-tests = pkgs.runCommand "rust-tests"
-            {
-            } ''
+            { } ''
             export PROJECT_ROOT="${projectRoot}"
             bash ${inputsDir}/rust-tests.sh
             touch $out

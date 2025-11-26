@@ -32,14 +32,14 @@
           };
           # Project root from input
           projectRoot = toString project-root;
-          
+
           # Inputs directory path (relative to project root)
           # project-root points to .flakes/ (from path:..), so we need apps/inputs
           inputsDir = project-root + "/apps/inputs";
-          
+
           # Helper to get script path from filename
           scriptPath = scriptName: inputsDir + "/${scriptName}";
-          
+
           # Tool mapping: tool name -> package
           # This defines which tools are available to scripts via ${TOOL_BIN} env vars
           tools = {
@@ -48,37 +48,42 @@
             jq = pkgs.jq;
             nix = pkgs.nix;
           };
-          
+
           # Generate substitution variables from tools mapping
           # Converts { cargo = <pkg>; ... } to { CARGO_BIN = "<pkg>/bin"; ... }
-          toolSubstitutions = lib.mapAttrs' 
+          toolSubstitutions = lib.mapAttrs'
             (name: pkg: lib.nameValuePair "${lib.toUpper name}_BIN" "${pkg}/bin")
             tools;
-          
+
           # Additional substitutions (non-tool paths)
           extraSubstitutions = {
             # Validation script path (loose contract - script uses VALIDATE_SCRIPT env var)
             VALIDATE_SCRIPT = toString (scriptPath "validate-flake-lock.sh");
           };
-          
+
           # Helper to create app from shell script with automatic tool hydration
           # Automatically substitutes all tools and extra variables into the script
           # Reads script content and replaces ${VAR} patterns with actual values
-          mkAppFromScript = name: scriptPath: description: let
-            allVars = toolSubstitutions // extraSubstitutions;
-            # Read script and replace all ${VAR} patterns
-            scriptContent = builtins.readFile scriptPath;
-            # Replace each variable: ${VAR} -> value
-            replacedContent = lib.foldl' (content: varName:
-              let varValue = allVars.${varName}; in
-              lib.replaceStrings ["${" + varName + "}"] [varValue] content
-            ) scriptContent (lib.attrNames allVars);
-          in {
-            type = "app";
-            meta = { inherit description; };
-            program = toString (pkgs.writeShellScript "${name}-script" replacedContent);
-          };
-          
+          mkAppFromScript = name: scriptPath: description:
+            let
+              allVars = toolSubstitutions // extraSubstitutions;
+              # Read script and replace all ${VAR} patterns
+              scriptContent = builtins.readFile scriptPath;
+              # Replace each variable: ${VAR} -> value
+              replacedContent = lib.foldl'
+                (content: varName:
+                  let varValue = allVars.${varName}; in
+                  lib.replaceStrings [ "${" + varName + "}" ] [ varValue ] content
+                )
+                scriptContent
+                (lib.attrNames allVars);
+            in
+            {
+              type = "app";
+              meta = { inherit description; };
+              program = toString (pkgs.writeShellScript "${name}-script" replacedContent);
+            };
+
           # Define all apps with their script filenames (not full paths)
           # Script paths are constructed dynamically from inputsDir
           appDefinitions = {
