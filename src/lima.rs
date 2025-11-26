@@ -49,6 +49,13 @@ struct ProvisionStep {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+struct GuestAgent {
+    enabled: bool,
+    #[serde(rename = "logPath", skip_serializing_if = "Option::is_none")]
+    log_path: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct LimaConfig {
     #[serde(rename = "vmType")]
     vm_type: String,
@@ -61,6 +68,8 @@ struct LimaConfig {
     ssh: SshConfig,
     env: HashMap<String, String>,
     provision: Vec<ProvisionStep>,
+    #[serde(rename = "guestAgent", skip_serializing_if = "Option::is_none")]
+    guest_agent: Option<GuestAgent>,
 }
 
 /// Generate Lima YAML configuration from instance model
@@ -114,6 +123,10 @@ fi
 "#
             .to_string(),
         }],
+        guest_agent: Some(GuestAgent {
+            enabled: true,
+            log_path: Some("/var/log/lima-guest-agent.log".to_string()),
+        }),
     };
 
     // Add comment header
@@ -510,6 +523,27 @@ mod tests {
         assert_eq!(
             parsed.env.get("LIMA_WORKDIR_DISABLED"),
             Some(&"1".to_string())
+        );
+    }
+
+    #[test]
+    fn test_generate_lima_yaml_guest_agent() {
+        let instance = create_test_instance();
+        let yaml = generate_lima_yaml(&instance).expect("should generate YAML");
+
+        // Verify guest agent configuration is present
+        assert!(yaml.contains("guestAgent:"));
+        assert!(yaml.contains("enabled: true"));
+        assert!(yaml.contains("logPath:"));
+        assert!(yaml.contains("/var/log/lima-guest-agent.log"));
+
+        let parsed: LimaConfig = serde_yaml::from_str(&yaml).expect("valid YAML");
+        assert!(parsed.guest_agent.is_some());
+        let guest_agent = parsed.guest_agent.unwrap();
+        assert!(guest_agent.enabled);
+        assert_eq!(
+            guest_agent.log_path,
+            Some("/var/log/lima-guest-agent.log".to_string())
         );
     }
 }
