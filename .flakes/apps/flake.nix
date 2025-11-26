@@ -33,6 +33,12 @@
           # Project root from input
           projectRoot = toString project-root;
           
+          # Inputs directory path (relative to project root)
+          inputsDir = project-root + "/.flakes/apps/inputs";
+          
+          # Helper to get script path from filename
+          scriptPath = scriptName: inputsDir + "/${scriptName}";
+          
           # Tool mapping: tool name -> package
           # This defines which tools are available to scripts via ${TOOL_BIN} env vars
           tools = {
@@ -51,7 +57,7 @@
           # Additional substitutions (non-tool paths)
           extraSubstitutions = {
             # Validation script path (loose contract - script uses VALIDATE_SCRIPT env var)
-            VALIDATE_SCRIPT = toString (project-root + "/.flakes/apps/inputs/validate-flake-lock.sh");
+            VALIDATE_SCRIPT = toString (scriptPath "validate-flake-lock.sh");
           };
           
           # Helper to create app from shell script with automatic tool hydration
@@ -59,43 +65,41 @@
           mkAppFromScript = name: scriptPath: description: {
             type = "app";
             meta = { inherit description; };
-            program = toString (pkgs.substituteAll ({
+            program = toString (pkgs.replaceVars {
               name = "${name}-script";
               src = scriptPath;
-            } // toolSubstitutions // extraSubstitutions));
+              vars = toolSubstitutions // extraSubstitutions;
+            });
           };
           
+          # Define all apps with their script filenames (not full paths)
+          # Script paths are constructed dynamically from inputsDir
+          appDefinitions = {
+            "impure-flake-prep" = {
+              script = "impure-flake-prep.sh";
+              description = "Prepare Rust project for Nix: generate Cargo.lock";
+            };
+            "impure-update-flakes" = {
+              script = "impure-update-flakes.sh";
+              description = "Update flake.lock files for all flakes in root and .flakes/ directories (impure)";
+            };
+            "impure-lock-flakes" = {
+              script = "impure-lock-flakes.sh";
+              description = "Lock flake.lock files for all flakes in root and .flakes/ directories (impure, no updates)";
+            };
+            "graph-refresh" = {
+              script = "graph-refresh.sh";
+              description = "Graph-aware flake lock refresh with schema validation";
+            };
+            "graph-show" = {
+              script = "graph-show.sh";
+              description = "Show flake input graph (json/mermaid/dot)";
+            };
+          };
         in
-        {
-          # Pre-Nix preparation: impure operation to prepare inputs for deterministic builds
-          # Nix's buildRustPackage uses Cargo.lock + cargoHash to download and verify dependencies
-          # No vendoring needed - Nix handles dependency fetching and caching
-          impure-flake-prep = mkAppFromScript "impure-flake-prep"
-            (project-root + "/.flakes/apps/inputs/impure-flake-prep.sh")
-            "Prepare Rust project for Nix: generate Cargo.lock";
-
-          # Update all flake.lock files in root and .flakes/ subdirectories
-          # Impure operation: modifies flake.lock files in the project directory
-          impure-update-flakes = mkAppFromScript "impure-update-flakes"
-            (project-root + "/.flakes/apps/inputs/impure-update-flakes.sh")
-            "Update flake.lock files for all flakes in root and .flakes/ directories (impure)";
-
-          # Lock all flake.lock files in root and .flakes/ subdirectories
-          # Impure operation: creates/updates flake.lock files without updating inputs
-          impure-lock-flakes = mkAppFromScript "impure-lock-flakes"
-            (project-root + "/.flakes/apps/inputs/impure-lock-flakes.sh")
-            "Lock flake.lock files for all flakes in root and .flakes/ directories (impure, no updates)";
-
-          # Graph-aware flake lock refresh tool with schema validation
-          # Uses flake.lock schema to validate structure and classify nodes
-          graph-refresh = mkAppFromScript "graph-refresh"
-            (project-root + "/.flakes/apps/inputs/graph-refresh.sh")
-            "Graph-aware flake lock refresh with schema validation";
-
-          # Graph visualization tool
-          graph-show = mkAppFromScript "graph-show"
-            (project-root + "/.flakes/apps/inputs/graph-show.sh")
-            "Show flake input graph (json/mermaid/dot)";
-        });
+        # Build apps from definitions using dynamic paths
+        lib.mapAttrs
+          (name: def: mkAppFromScript name (scriptPath def.script) def.description)
+          appDefinitions;
     };
 }
