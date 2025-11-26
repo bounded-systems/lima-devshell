@@ -52,23 +52,29 @@
 
           # Check Rust code formatting
           rust-fmt-check = pkgs.runCommand "rust-fmt-check"
-            { } ''
+            {
+              nativeBuildInputs = with pkgs; [ cargo rustfmt ];
+            } ''
             export PROJECT_ROOT="${projectRoot}"
             bash ${inputsDir}/rust-fmt-check.sh
             touch $out
           '';
 
-          # Run clippy check (requires Rust toolchain in PATH)
+          # Run clippy check
           clippy-check = pkgs.runCommand "clippy-check"
-            { } ''
+            {
+              nativeBuildInputs = with pkgs; [ cargo clippy ];
+            } ''
             export PROJECT_ROOT="${projectRoot}"
             bash ${inputsDir}/clippy-check.sh
             touch $out
           '';
 
-          # Run Rust unit tests (requires Rust toolchain in PATH)
+          # Run Rust unit tests
           rust-tests = pkgs.runCommand "rust-tests"
-            { } ''
+            {
+              nativeBuildInputs = with pkgs; [ cargo ];
+            } ''
             export PROJECT_ROOT="${projectRoot}"
             bash ${inputsDir}/rust-tests.sh
             touch $out

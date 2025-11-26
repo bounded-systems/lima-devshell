@@ -29,12 +29,20 @@
             inherit system;
             config.allowUnfree = true;
           };
+          # Helper to create a formatter app from a script
+          mkFormatter = name: script: pkgs.writeShellApplication {
+            inherit name;
+            runtimeInputs = with pkgs; [ nixpkgs-fmt cargo rustfmt findutils ];
+            text = builtins.readFile script;
+          };
         in
-        pkgs.writeShellApplication {
-          name = "format";
-          runtimeInputs = with pkgs; [ nixpkgs-fmt cargo rustfmt findutils ];
-          # Read script from inputs directory
-          text = builtins.readFile formatScript;
+        {
+          # Default formatter: formats both Nix and Rust
+          default = mkFormatter "format" formatScript;
+          # Format only Nix files
+          nix = mkFormatter "format-nix" ./inputs/format-nix.sh;
+          # Format only Rust files
+          rust = mkFormatter "format-rust" ./inputs/format-rust.sh;
         });
     };
 }
