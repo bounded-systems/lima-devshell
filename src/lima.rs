@@ -60,6 +60,19 @@ fn should_enable_rosetta(vm_type: &str) -> bool {
     vm_type == "vz" && std::env::consts::OS == "macos" && detect_arch() == "aarch64"
 }
 
+/// Detect the appropriate mount type based on VM type and host
+/// - macOS with VZ: `virtiofs` (requires macOS 13+, which VZ also requires)
+/// - Others: `None` (let Lima use defaults: 9p for QEMU, virtiofs for VZ)
+fn detect_mount_type(vm_type: &str) -> Option<&'static str> {
+    if vm_type == "vz" && std::env::consts::OS == "macos" {
+        // VZ on macOS requires macOS 13+, so virtiofs is safe to use
+        Some("virtiofs")
+    } else {
+        // Let Lima use its defaults for other configurations
+        None
+    }
+}
+
 // Types derived from lima-config-schema.json
 // These structs match the JSON Schema interface - see schema for field descriptions
 
@@ -180,6 +193,10 @@ struct LimaConfig {
     // This makes it clear we're intentionally not forwarding any ports
     #[serde(rename = "portForwards", skip_serializing_if = "Vec::is_empty")]
     port_forwards: Vec<PortForward>, // default: []
+    #[serde(rename = "mountType", skip_serializing_if = "Option::is_none")]
+    mount_type: Option<String>, // enum: "reverse-sshfs" | "9p" | "virtiofs" | "default" | null
+    #[serde(rename = "mountInotify", skip_serializing_if = "Option::is_none")]
+    mount_inotify: Option<bool>, // Enable inotify support for mounted directories (EXPERIMENTAL)
 }
 
 /// Generate Lima YAML configuration from instance model
@@ -194,6 +211,9 @@ fn generate_lima_yaml_impl(instance: &InstanceModel) -> Result<String> {
     let arch = detect_arch();
     let image_url = get_ubuntu_image_url(arch);
     let enable_rosetta = should_enable_rosetta(vm_type);
+    let mount_type = detect_mount_type(vm_type);
+    // Enable mountInotify when using virtiofs for better file-watching in dev tooling
+    let mount_inotify = mount_type.map(|_| true);
 
     let config = LimaConfig {
         vm_type: Some(vm_type.to_string()),
@@ -269,6 +289,8 @@ fi
         //   - No explicit rules needed for standard devshell workflows
         // This is the correct default for Nix devshells - services "just work" on localhost
         port_forwards: Vec::new(),
+        mount_type: mount_type.map(|s| s.to_string()),
+        mount_inotify,
     };
 
     // Add comment header
@@ -651,6 +673,53 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_detect_mount_type() {
+        let vm_type = detect_vm_type();
+        let mount_type = detect_mount_type(vm_type);
+        let os = std::env::consts::OS;
+        
+        // virtiofs should be detected for macOS with VZ
+        if os == "macos" && vm_type == "vz" {
+            assert_eq!(
+                mount_type,
+                Some("virtiofs"),
+                "virtiofs should be detected for macOS with VZ"
+            );
+        } else {
+            assert_eq!(
+                mount_type,
+                None,
+                "mount type should be None for other configurations (let Lima use defaults)"
+            );
+        }
+    }
+
+    #[test]
+    fn test_detect_mount_type_vz_macos() {
+        // Explicitly test VZ on macOS
+        let mount_type = detect_mount_type("vz");
+        if std::env::consts::OS == "macos" {
+            assert_eq!(mount_type, Some("virtiofs"));
+        } else {
+            assert_eq!(mount_type, None);
+        }
+    }
+
+    #[test]
+    fn test_detect_mount_type_qemu() {
+        // QEMU should not trigger virtiofs detection
+        let mount_type = detect_mount_type("qemu");
+        assert_eq!(mount_type, None, "QEMU should not use virtiofs (let Lima use 9p default)");
+    }
+
+    #[test]
+    fn test_detect_mount_type_wsl2() {
+        // WSL2 should not trigger virtiofs detection
+        let mount_type = detect_mount_type("wsl2");
+        assert_eq!(mount_type, None, "WSL2 should not use virtiofs");
+    }
+
     fn create_test_instance() -> InstanceModel {
         InstanceModel {
             name: "test-instance".to_string(),
@@ -782,5 +851,48 @@ mod tests {
             guest_agent.log_path,
             Some("/var/log/lima-guest-agent.log".to_string())
         );
+    }
+
+    #[test]
+    fn test_generate_lima_yaml_mount_type() {
+        let instance = create_test_instance();
+        let yaml = generate_lima_yaml(&instance).expect("should generate YAML");
+        let vm_type = detect_vm_type();
+        let mount_type = detect_mount_type(vm_type);
+        let os = std::env::consts::OS;
+
+        let parsed: LimaConfig = serde_yaml::from_str(&yaml).expect("valid YAML");
+
+        // On macOS with VZ, we should have virtiofs and mountInotify
+        if os == "macos" && vm_type == "vz" {
+            assert_eq!(
+                parsed.mount_type.as_deref(),
+                Some("virtiofs"),
+                "mountType should be virtiofs on macOS with VZ"
+            );
+            assert_eq!(
+                parsed.mount_inotify,
+                Some(true),
+                "mountInotify should be enabled with virtiofs"
+            );
+            // Verify YAML contains these fields
+            assert!(yaml.contains("mountType: virtiofs"));
+            assert!(yaml.contains("mountInotify: true"));
+        } else {
+            // For other configurations, mount type should be None (not serialized)
+            assert_eq!(
+                parsed.mount_type,
+                None,
+                "mountType should be None for non-macOS-VZ configurations"
+            );
+            assert_eq!(
+                parsed.mount_inotify,
+                None,
+                "mountInotify should be None when not using virtiofs"
+            );
+            // Verify YAML does not contain these fields (they're skipped when None)
+            assert!(!yaml.contains("mountType:"), "mountType should not be in YAML when None");
+            assert!(!yaml.contains("mountInotify:"), "mountInotify should not be in YAML when None");
+        }
     }
 }

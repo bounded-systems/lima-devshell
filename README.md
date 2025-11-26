@@ -44,9 +44,11 @@ nix develop .
 Install the plugin wrapper to use `lima-devshell` as a Lima plugin:
 
 ```bash
-# Install the plugin wrapper
+# Quick install using the installation script
+./install-plugin.sh
+
+# Or manually create a symlink
 ln -s /path/to/lima-devshell/limactl-devshell /usr/local/bin/limactl-devshell
-# or via Home Manager (see Installation section)
 
 # Then use it as a Lima plugin
 cd ~/.local/state/git/worktrees/io.github/pushd/percy/COMMERCE-4873
@@ -54,6 +56,12 @@ limactl devshell  # Automatically enters Lima and runs nix develop
 ```
 
 The plugin will appear in `limactl --help` under "Available Plugins (Experimental)".
+
+**Verify installation:**
+```bash
+limactl --help | grep devshell
+limactl devshell --help
+```
 
 #### Option 2: Direct Command
 
@@ -380,6 +388,18 @@ This project includes a Lima CLI plugin wrapper (`limactl-devshell`) that allows
 
 ### Installation as Plugin
 
+#### Quick Install (Recommended)
+
+Use the provided installation script:
+
+```bash
+# From the project root
+./install-plugin.sh
+
+# Or specify a custom installation directory
+INSTALL_DIR=~/.local/bin ./install-plugin.sh
+```
+
 #### Manual Installation
 
 ```bash
@@ -406,6 +426,102 @@ Both interfaces will continue to work during the transition period. The plugin a
 - Integration with Lima's plugin ecosystem
 
 For more details on Lima plugins, see the [Lima CLI Plugins Documentation](https://lima-vm.io/docs/config/plugin/cli/).
+
+## Lima Feature Status
+
+This section documents Lima's deprecated and experimental features to help users understand feature stability and migration paths. For the most up-to-date information, refer to the [official Lima documentation](https://lima-vm.io/docs/releases/).
+
+### Deprecated Features
+
+Lima maintains a list of deprecated features that should be avoided in new configurations. This project avoids using deprecated features.
+
+**Official Documentation**: [Lima Deprecated Features](https://lima-vm.io/docs/releases/deprecated/)
+
+Key deprecated features to be aware of:
+
+- **`limactl show-ssh` command**: Deprecated in v0.18.0. Use `ssh -F ~/.lima/default/ssh.config lima-default` instead.
+- **`limactl --yes` flag**: Deprecated in v2.0.0. Use `limactl (clone|rename|edit|shell) --start` instead.
+- **Environment variable `LIMA_SSH_OVER_VSOCK`**: Deprecated in v2.0.2. Use the YAML property `.ssh.overVsock` instead.
+
+**Note**: While `LIMA_SSH_OVER_VSOCK` appears in the environment variables schema (`lima-env-vars-schema.json`), this project does not use it. Use `.ssh.overVsock` in the YAML configuration instead.
+
+### Experimental Features
+
+⚠️ **Warning**: Experimental features are subject to change and may be modified or removed in future Lima releases. Use them with caution and check the [official experimental features documentation](https://lima-vm.io/docs/releases/experimental/) for updates.
+
+**Official Documentation**: [Lima Experimental Features](https://lima-vm.io/docs/releases/experimental/)
+
+Experimental features used or referenced by this project:
+
+- **⚠️ CLI Plugins (Experimental)**: The `limactl devshell` plugin wrapper uses Lima's experimental CLI plugin system. This appears in `limactl --help` under "Available Plugins (Experimental)". The plugin interface may change in future Lima releases.
+
+- **⚠️ `limactl template *` commands (Experimental)**: The template commands (`template copy`, `template url`, `template validate`, `template yq`) are experimental. This project's documentation references these commands for exploring and validating Lima templates, but they may change in future releases.
+
+- **⚠️ `vmType: wsl2` (Experimental)**: The `wsl2` VM type is experimental. This project's code references it for Windows support, but it's not actively used on macOS/Linux hosts where this project primarily operates.
+
+Other experimental features (not used by this project):
+
+- `mountType: virtiofs` on Linux
+- `arch`: `riscv64`, `armv7l`, `s390x`, and `ppc64le`
+- `video.display: vnc` and relevant configuration
+- `audio.device`
+- `mountInotify: true`
+- External drivers (building and using drivers as separate executables)
+- `vmType: krunkit`
+- `github:` URL scheme for referencing templates
+- `limactl snapshot *` commands
+- `limactl tunnel` command
+- `limactl mcp *` commands
+
+### Stable Features (Graduated from Experimental)
+
+The following features were once experimental but are now stable:
+
+- **`vmType: vz`**: Now stable. This project uses `vz` on macOS for optimal performance.
+- **`mountType: virtiofs`**: Now stable (graduated in v1.0). Not currently used by this project.
+- **`vmType: vz` with `mountType: virtiofs`**: Stable combination for macOS.
+- **`mode: user-v2` in networks**: Now stable (graduated in v1.0).
+
+### Project-Specific Notes
+
+This project uses the following Lima features:
+
+**Stable Features**:
+- `vmType: vz` (macOS) and `vmType: qemu` (Linux) - Stable VM types
+- `guestAgent` - Required for MCP (Model Context Protocol) support
+- SSH configuration - Standard SSH access with agent forwarding
+- Standard mounts - File system mounts for worktrees and bare repos
+- Rosetta support - For Intel-on-ARM emulation on macOS (when using `vz`)
+
+**Experimental Features**:
+- CLI plugins - Used for `limactl devshell` integration
+- Template commands - Referenced in documentation for template exploration
+
+**Avoided Features**:
+- All deprecated features are avoided
+- Experimental features are only used when necessary (CLI plugins) or for documentation purposes (template commands)
+
+When in doubt, prefer stable features. Experimental features may change, so check the [Lima experimental features documentation](https://lima-vm.io/docs/releases/experimental/) before relying on them in production workflows.
+
+## Lima Subprojects
+
+Lima has several subprojects that extend its functionality or provide related tools. These are maintained by the Lima project team.
+
+**Official Documentation**: [Lima Subprojects](https://lima-vm.io/docs/community/subprojects/)
+
+Key subprojects:
+
+- **[socket_vmnet](https://github.com/lima-vm/socket_vmnet)**: vmnet.framework support for unmodified rootless QEMU. Provides network support for Lima VMs on macOS.
+
+- **[lima-actions](https://github.com/lima-vm/lima-actions)**: Run Lima on GitHub Actions. Enables using Lima VMs in CI/CD pipelines.
+
+- **[go-qcow2reader](https://github.com/lima-vm/go-qcow2reader)**: qcow2 reader for Go. Utility library for working with QEMU disk images.
+
+- **[sshocker](https://github.com/lima-vm/sshocker)**: ssh + reverse sshfs + port forwarder, in Docker-like CLI. This was the predecessor of Lima and is now maintained as a separate project.
+
+- **[alpine-lima](https://github.com/lima-vm/alpine-lima)**: Create an Alpine-based image for Lima. Provides lightweight Alpine Linux images optimized for Lima.
+
+For a complete list of Lima-related projects, see the [lima-vm GitHub organization](https://github.com/lima-vm).
 
 ## Repository Structure
 
