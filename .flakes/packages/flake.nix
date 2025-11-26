@@ -165,7 +165,17 @@
               fi
               
               echo ""
-              echo "✓ All builds passed!"
+              echo "=== Testing flake check ==="
+              if nix flake check --no-warn-dirty >/dev/null 2>&1; then
+                echo "  flake check: ✓"
+              else
+                echo "  flake check: ✗ FAILED"
+                nix flake check --no-warn-dirty 2>&1 | tail -5
+                exit 1
+              fi
+              
+              echo ""
+              echo "✓ All builds and checks passed!"
             '';
           };
 
