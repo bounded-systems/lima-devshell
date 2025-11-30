@@ -1,5 +1,5 @@
 # This flake owns only the `devShells` output space.
-# It may depend on: nixpkgs, lib-flake, meta-flake.
+# It may depend on: nixpkgs.
 # It must not import from other .flakes/* directories.
 # All cross-space composition happens in .flakes/flake.nix (the router).
 #
@@ -9,18 +9,15 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    lib-flake.url = "path:../lib";
-    # Inputs directory - static files only (shell hooks, templates, etc.)
-    inputs.url = "path:./inputs";
-    inputs.flake = false;
   };
 
-  outputs = { self, nixpkgs, lib-flake }:
+  outputs = { self, nixpkgs }:
     let
-      # Use helpers from lib-flake (shared via router)
-      systems = lib-flake.lib.systems;
-      perSystem = lib-flake.lib.perSystem;
-      lib = nixpkgs.lib;
+      systems = [ "x86_64-linux" "aarch64-linux" "x86_64-darwin" "aarch64-darwin" ];
+      # Import nixpkgs for lib access
+      pkgsFor = system: import nixpkgs { inherit system; };
+      lib = (pkgsFor "x86_64-linux").lib;
+      perSystem = f: lib.genAttrs systems f;
     in
     {
       devShells = perSystem (system:
