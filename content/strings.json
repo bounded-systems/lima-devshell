@@ -1,0 +1,10 @@
+{
+  "name": {
+    "type": "name",
+    "value": "Lima Devshell"
+  },
+  "description": {
+    "type": "meta",
+    "value": "Bootstrap devshell for Lima VM environments and Home Manager configuration for macOS. This flake provides:"
+  }
+}
