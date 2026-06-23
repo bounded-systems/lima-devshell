@@ -5,6 +5,6 @@
   },
   "description": {
     "type": "meta",
-    "value": "Bootstrap devshell for Lima VM environments and Home Manager configuration for macOS. This flake provides:"
+    "value": "Bootstrap devshell for Lima VM environments and Home Manager configuration for macOS.  This flake provides: - Minimal tooling needed to launch project devshells inside Lima VMs - Complete Home Manager configuration for macOS (integrated with Determinate Systems) This flake ser…"
   }
 }
