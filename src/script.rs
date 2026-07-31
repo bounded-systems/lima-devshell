@@ -126,6 +126,61 @@ fi
         GUEST_WORKTREE_ROOT,
         bootstrap_path,
         bootstrap_path,
+        bootstrap_path,
         bootstrap_github
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::PathBuf;
+
+    fn ctx() -> AppContext {
+        AppContext {
+            target_dir_host: PathBuf::from("/host/worktrees/demo"),
+            guest_cwd: "/worktrees/demo".to_string(),
+            path_segments: vec!["demo".to_string()],
+            lima_instance: "devshell".to_string(),
+            bare_repo_path: PathBuf::from("/host/bare.git"),
+            bare_repo_mount_name: "bare".to_string(),
+        }
+    }
+
+    /// The format string carries nine placeholders. Nothing exercised this
+    /// function, so an arity mismatch sat on main as a hard compile error.
+    #[test]
+    fn guest_script_substitutes_every_placeholder() {
+        let script = build_guest_script(&ctx());
+        assert!(
+            !script.contains("{}"),
+            "unsubstituted placeholder left in generated script"
+        );
+        assert!(script.contains("TARGET_DIR=\"${1:-/worktrees/demo}\""));
+        assert!(script.contains("  /worktrees/*)"));
+    }
+
+    /// The two branches are not interchangeable: the failure message reports the
+    /// local flake PATH that was missing, while the command that follows falls
+    /// back to the GitHub URL. Swapping them still compiles.
+    #[test]
+    fn bootstrap_fallback_reports_path_and_runs_github_url() {
+        let script = build_guest_script(&ctx());
+        let github = get_bootstrap_github_url();
+        let path = get_bootstrap_flake_path();
+
+        let warning = script
+            .lines()
+            .find(|l| l.contains("bootstrap flake not found at"))
+            .expect("fallback warning line present");
+        assert!(
+            warning.contains(&path),
+            "warning should name the flake path, got: {warning}"
+        );
+
+        assert!(
+            script.contains(&format!("nix develop {github} --command")),
+            "fallback should invoke the GitHub URL"
+        );
+    }
 }
